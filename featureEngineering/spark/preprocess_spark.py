@@ -8,8 +8,7 @@ import  configparser
 import os
 
 
-workspace_path='/data/code/DeepCTR/'
-hdfs_data_path = '/user/hadoop/icmechallenge2019/track2/data/'
+
 
 class SparkFEProcess:
 
@@ -24,6 +23,8 @@ class SparkFEProcess:
         self.init_logger()
 
     def init_config(self):
+        current_path = os.path.dirname(os.path.realpath(__file__))
+        workspace_path = current_path.split('featureEngineering')[0]
         config_file = workspace_path + 'resource/config.ini'
         parser = configparser.ConfigParser()
         parser.read(config_file)
@@ -43,7 +44,7 @@ class SparkFEProcess:
 
     def read_rdd(self, fileName):
         try:
-            file_path = hdfs_data_path + fileName
+            file_path = self.parser.get("hdfs_path", "hdfs_data_path") + fileName
             data_rdd = self.sc.textFile(file_path)
             return data_rdd
         except Exception as e:
@@ -62,6 +63,7 @@ class SparkFEProcess:
         print('total: ' + str(total))
 
 if __name__ == "__main__":
+
     spark_job = SparkFEProcess()
 
     spark_job.data_describe()
