@@ -2,17 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ffb1b2da-b167-4f2e-8f2b-761ce82dfa7f" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/encodings.xml" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/featureEngineering/spark/explore_spark.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/scopes/scope_settings.xml" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/vcs.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/DeepCTR.iml" afterPath="$PROJECT_DIR$/.idea/DeepCTR.iml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/README.md" afterPath="$PROJECT_DIR$/README.md" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/misc.xml" afterPath="$PROJECT_DIR$/.idea/misc.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/modules.xml" afterPath="$PROJECT_DIR$/.idea/modules.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/resource/config.ini" afterPath="$PROJECT_DIR$/resource/config.ini" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py" afterPath="$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="DeepCTR.iws" />
@@ -46,11 +37,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="explore_spark.py" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="explore_spark.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/featureEngineering/spark/explore_spark.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.4965909" vertical-offset="4555" max-vertical-offset="5952">
-              <caret line="208" column="29" selection-start-line="208" selection-start-column="29" selection-end-line="208" selection-end-column="29" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="811" max-vertical-offset="5952">
+              <caret line="208" column="34" selection-start-line="208" selection-start-column="34" selection-end-line="208" selection-end-column="34" />
               <folding>
                 <element signature="e#125#145#0" expanded="true" />
               </folding>
@@ -58,11 +49,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="preprocess_spark.py" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="preprocess_spark.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="504" max-vertical-offset="4704">
-              <caret line="40" column="26" selection-start-line="40" selection-start-column="26" selection-end-line="40" selection-end-column="26" />
+            <state vertical-scroll-proportion="0.6454545" vertical-offset="3680" max-vertical-offset="4560">
+              <caret line="177" column="0" selection-start-line="177" selection-start-column="0" selection-end-line="177" selection-end-column="0" />
               <folding>
                 <element signature="e#25#68#0" expanded="true" />
               </folding>
@@ -109,8 +100,8 @@
       <list>
         <option value="$PROJECT_DIR$/README.md" />
         <option value="$PROJECT_DIR$/featureEngineering/spark/preprocess_functions.py" />
-        <option value="$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py" />
         <option value="$PROJECT_DIR$/featureEngineering/spark/explore_spark.py" />
+        <option value="$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py" />
       </list>
     </option>
   </component>
@@ -552,16 +543,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="504" max-vertical-offset="4704">
-          <caret line="40" column="26" selection-start-line="40" selection-start-column="26" selection-end-line="40" selection-end-column="26" />
-          <folding>
-            <element signature="e#25#68#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/README.md">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="-14.48" vertical-offset="670" max-vertical-offset="1800">
@@ -572,10 +553,20 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/featureEngineering/spark/explore_spark.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.4965909" vertical-offset="4555" max-vertical-offset="5952">
-          <caret line="208" column="29" selection-start-line="208" selection-start-column="29" selection-end-line="208" selection-end-column="29" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="811" max-vertical-offset="5952">
+          <caret line="208" column="34" selection-start-line="208" selection-start-column="34" selection-end-line="208" selection-end-column="34" />
           <folding>
             <element signature="e#125#145#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.6454545" vertical-offset="3680" max-vertical-offset="4560">
+          <caret line="177" column="0" selection-start-line="177" selection-start-column="0" selection-end-line="177" selection-end-column="0" />
+          <folding>
+            <element signature="e#25#68#0" expanded="true" />
           </folding>
         </state>
       </provider>

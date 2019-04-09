@@ -10,8 +10,7 @@ import pyspark.sql.functions as fn
 
 #from  featureEngineering.settings import *
 
-# workspace_path='/data/code/DeepCTR/'
-# hdfs_data_path = '/user/hadoop/icmechallenge2019/track2/data/'
+
 
 class SparkFEProcess:
 
@@ -174,11 +173,6 @@ class SparkFEProcess:
 
 
         return data_dict
-
-
-
-
-
 
 
 
