@@ -13,8 +13,8 @@ class Args():
     embedding_size = 256
     deep_layers = [512, 256, 128]
     epoch = 3
-    batch_size = 1
-    learning_rate = 0.0001
+    batch_size = 64
+    learning_rate = 0.01 #或者0.001 学习率选择过小，会出现收敛速度慢的情况
     l2_reg_rate = 0.01
     checkpoint_dir = '/data/code/DeepCTR/data/saver/ckpt'
     is_training = True
@@ -150,7 +150,7 @@ class model():
         print('output:', self.out)
 
         # loss
-        self.out = tf.nn.sigmoid(self.out)
+        self.out = tf.nn.sigmoid(self.out)   #sigmoid函数将值映射到0,1之间 就可以得到预估点击概率
 
         self.loss = -tf.reduce_mean(
             self.label * tf.log(self.out + 1e-24) + (1 - self.label) * tf.log(1 - self.out + 1e-24))
@@ -195,6 +195,7 @@ class model():
         return loss, step
 
     def predict(self, sess, feat_index, feat_value):
+        # 先查看图中的依赖关系，得到本次sess.run()需要计算图中那些节点，然后进行一次计算，返回列表中的值，如下面的self.out，上面的self.loss等
         result = sess.run([self.out], feed_dict={
             self.feat_index: feat_index,
             self.feat_value: feat_value
@@ -203,6 +204,7 @@ class model():
 
     def save(self, sess, path):
         saver = tf.train.Saver()
+        # saver=tf.train.Saver(max_to_keep=3)
         saver.save(sess, save_path=path)
 
     def restore(self, sess, path):
@@ -249,90 +251,108 @@ if __name__ == '__main__':
     args = Args()
     gpu_config = tf.ConfigProto()
     gpu_config.gpu_options.allow_growth = True
-    # data = load_data()
-    data={}
+
+    #对finish和like进行分别训练
+    traindata={}
     localPath='/data/code/DeepCTR/data/'
     print('读取feat_dim.txt中的值，即feature_sizes')
     f = open(localPath+"feat_dim.txt","r")
-    data['feat_dim']=int(f.read())
+    traindata['feat_dim']=int(f.read())
     f.close()
+    #循环读取数据，不断迭代
+    min_loss=float("inf")
+    for i in range(10):
 
-    index_filename='train_feature_index_0.csv'
-    value_filename='train_feature_value_0.csv'
-    label_filename='train_label_0.csv'
-    # path = "/user/hadoop/icmechallenge2019/track2/data/"
+        index_filename='train_feature_index_'+str(i)+'.csv'
+        value_filename='train_feature_value_'+str(i)+'.csv'
+        label_filename='train_label_'+str(i)+'.csv'
 
-    # os.system("hadoop fs -getmerge {} {}".format(path + index_filename,localPath+index_filename))
-    # os.system("hadoop fs -getmerge {} {}".format(path + value_filename,localPath+value_filename))
+        feature_index=pd.read_csv(localPath+index_filename)  #如果是从hdfs上get下来的，在read_csv的时候指定数据类型
+        feature_value=pd.read_csv(localPath+value_filename)
 
-    # def get_hdfs_file(filename):
-    #     lines = []
-    #     with client.read(path+filename, encoding='utf-8', delimiter=',') as reader:
-    #         for line in reader:
-    #            lines.append(line.strip())
-    #     # column_str = lines[0]
-    #     # column_list = column_str.split(',')
-    #     # data = {"item_list":lines[1:]}
-    #     feature= pd.DataFrame(data=lines)
-    #     return feature
-    # feature_index=get_hdfs_file(index_filename)
-    # feature_value=get_hdfs_file(value_filename)
+        print(feature_index.head(5))
+        print(feature_value.head(5))
 
+        traindata['xi'] = feature_index.values.tolist()  #变成了list
+        traindata['xv'] = feature_value.values.tolist()
+        print(traindata['xi'][0:5])
+        print(traindata['xv'][0:5])
 
-    feature_index=pd.read_csv(localPath+index_filename)  #如果是从hdfs上get下来的，在read_csv的时候指定数据类型
-    feature_value=pd.read_csv(localPath+value_filename)
-    print(feature_index.head(5))
-    print(feature_value.head(5))
-
-    data['xi'] = feature_index.values.tolist()  #变成了list
-    data['xv'] = feature_value.values.tolist()
-    print(data['xi'][0:5])
-    print(data['xv'][0:5])
-
-    print('读取标签文件')
-    train_label=pd.read_csv(localPath+label_filename)
-    label_finish=train_label['finish'].values
-    label_like=train_label['like'].values
-    label_finish = label_finish.reshape(len(label_finish), 1)
-    label_like = label_like.reshape(len(label_like), 1)
-    data['y_train_finish'] = label_finish
-    data['y_train_like'] = label_like
-    # print( data['y_train_finish'][:10])
+        print('读取标签文件')
+        train_label=pd.read_csv(localPath+label_filename)
+        label_finish=train_label['finish'].values
+        label_like=train_label['like'].values
+        label_finish = label_finish.reshape(len(label_finish), 1)
+        label_like = label_like.reshape(len(label_like), 1)
+        traindata['y_train_finish'] = label_finish
+        traindata['y_train_like'] = label_like
+        # print( data['y_train_finish'][:10])
 
 
-    args.feature_sizes = data['feat_dim']
-    args.field_size = len(data['xi'][0])
-    args.is_training = True
+        args.feature_sizes = traindata['feat_dim']
+        args.field_size = len(traindata['xi'][0])
+        args.is_training = True
 
-    with tf.Session(config=gpu_config) as sess:
-        Model = model(args)
-        # init variables
-        sess.run(tf.global_variables_initializer())
-        sess.run(tf.local_variables_initializer())
+        with tf.Session(config=gpu_config) as sess:
+            Model = model(args)
+            # init variables
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
 
-        cnt = int(len(data['y_train_finish']) / args.batch_size)
-        print('time all:%s' % cnt)   #一次训练batch_size个样本，迭代cnt次
-        sys.stdout.flush()
-        if args.is_training:
-            for i in range(args.epoch):
-                print('epoch %s:' % i)
+            cnt = int(len(traindata['y_train_finish']) / args.batch_size)
+            print('time all:%s' % cnt)   #一次训练batch_size个样本，迭代cnt次
+            sys.stdout.flush()
+            if args.is_training:
+                for i in range(args.epoch):
+                    print('epoch %s:' % i)
+                    for j in range(0, cnt):
+                        X_index, X_value, y = get_batch(traindata['xi'], traindata['xv'], traindata['y_train_finish'], args.batch_size, j)
+                        # print('查看报错的数据行')
+                        # print(X_index)
+                        # print(X_value)
+                        # print(y)
+                        '''报错的原因是因为改行数据中存在nan值，导致loss为nan'''
+                        loss, step = Model.train(sess, X_index, X_value, y)
+                        '''
+                        print('保存方式一：每训练完一代的时候，都进行了保存，但后一次保存的模型会覆盖前一次的，最终只会保存最后一次')
+                        if j % 100 == 0:  #每100次迭代输出一次loss结果
+                            print('the times of training is %d, and the loss is %s' % (j, loss))
+                            Model.save(sess, args.checkpoint_dir)
+                        '''
+
+                        print('保存方式二：想保存验证精度最高的一代，则加个中间变量和判断语句就可以了')
+                        if loss < min_loss:
+                            min_loss=loss
+                            Model.save(sess, args.checkpoint_dir)
+                        '''
+                        print('保存方式三：保存验证精度最高的三代，且把每次的验证精度也随之保存下来，则我们可以生成一个txt文件用于保存')
+                        print('Model.save函数中添加max_to_keep,saver=tf.train.Saver(max_to_keep=3)')
+                        '''
+            else:
+                #读取测试数据
+                testdata={}
+                testdata['feat_dim']=int(f.read())
+                index_filename='test_feature_index.csv'
+                value_filename='test_feature_value.csv'
+                label_filename='test_label.csv'
+
+                feature_index=pd.read_csv(localPath+index_filename)
+                feature_value=pd.read_csv(localPath+value_filename)
+
+                testdata['xi'] = feature_index.values.tolist()  #变成了list
+                testdata['xv'] = feature_value.values.tolist()
+
+                print('读取测试集的标签文件')
+                test_label=pd.read_csv(localPath+label_filename)
+                label_finish=test_label['finish'].values
+                label_like=test_label['like'].values
+                label_finish = label_finish.reshape(len(label_finish), 1)
+                label_like = label_like.reshape(len(label_like), 1)
+                traindata['y_test_finish'] = label_finish
+                traindata['y_test_like'] = label_like
+
+                Model.restore(sess, args.checkpoint_dir)
                 for j in range(0, cnt):
-                    X_index, X_value, y = get_batch(data['xi'], data['xv'], data['y_train_finish'], args.batch_size, j)
-                    # print('查看报错的数据行')
-                    # print(X_index)
-                    # print(X_value)
-                    # print(y)
-                    '''报错的原因是因为改行数据中存在nan值，导致loss为nan'''
-                    loss, step = Model.train(sess, X_index, X_value, y)
-                    # if j % 100 == 0:  #每100次迭代输出一次loss结果
-                    print('the times of training is %d, and the loss is %s' % (j, loss))
-                    Model.save(sess, args.checkpoint_dir)
-        else:
-            Model.restore(sess, args.checkpoint_dir)
-            #继续训练
-            for j in range(0, cnt):
-                #输入新的X_index, X_value
-                X_index, X_value, y = get_batch(data['xi'], data['xv'], data['y_train'], args.batch_size, j)
-                loss, step = Model.train(sess, X_index, X_value, y)
-                # result = Model.predict(sess, X_index, X_value)
-                # print(result)
+                    X_index, X_value, y = get_batch(testdata['xi'], testdata['xv'], testdata['y_test_finish'], args.batch_size, j)
+                    result = Model.predict(sess, X_index, X_value)
+                    print(result)

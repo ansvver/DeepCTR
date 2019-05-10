@@ -2,16 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ffb1b2da-b167-4f2e-8f2b-761ce82dfa7f" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/MechineLearning/__init__.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/Tensorflow/deepfm/deepfm_spark.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/featureEngineering/spark/explore_face_spark.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/featureEngineering/spark/explore_nlp_spark.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/MechineLearning/lrgbdt.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/README.md" afterPath="$PROJECT_DIR$/README.md" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Tensorflow/deepfm/deepfm.py" afterPath="$PROJECT_DIR$/Tensorflow/deepfm/deepfm.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/featureEngineering/spark/explore_spark.py" afterPath="$PROJECT_DIR$/featureEngineering/spark/explore_spark.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py" afterPath="$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="DeepCTR.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -47,8 +38,8 @@
       <file leaf-file-name="preprocess_spark.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="5034" max-vertical-offset="8472">
-              <caret line="196" column="8" selection-start-line="196" selection-start-column="8" selection-end-line="197" selection-end-column="32" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="3594" max-vertical-offset="8472">
+              <caret line="176" column="22" selection-start-line="176" selection-start-column="22" selection-end-line="176" selection-end-column="22" />
               <folding>
                 <element signature="e#25#68#0" expanded="true" />
               </folding>
@@ -56,11 +47,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="README.md" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="README.md" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/README.md">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.55244756" vertical-offset="11574" max-vertical-offset="12432">
-              <caret line="502" column="32" selection-start-line="502" selection-start-column="32" selection-end-line="502" selection-end-column="32" />
+            <state vertical-scroll-proportion="-18.96" vertical-offset="11574" max-vertical-offset="12432">
+              <caret line="502" column="29" selection-start-line="502" selection-start-column="29" selection-end-line="502" selection-end-column="29" />
               <folding />
             </state>
           </provider>
@@ -97,12 +88,14 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="deepfm.py" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="deepfm.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Tensorflow/deepfm/deepfm.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="7301" max-vertical-offset="8184">
-              <caret line="324" column="42" selection-start-line="324" selection-start-column="42" selection-end-line="324" selection-end-column="42" />
-              <folding />
+            <state vertical-scroll-proportion="0.4348811" vertical-offset="0" max-vertical-offset="8736">
+              <caret line="16" column="34" selection-start-line="16" selection-start-column="34" selection-end-line="16" selection-end-column="34" />
+              <folding>
+                <element signature="e#0#18#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -158,12 +151,12 @@
         <option value="$PROJECT_DIR$/featureEngineering/spark/pre_read_trainIndex_spark.py" />
         <option value="$PROJECT_DIR$/featureEngineering/spark/explore_spark.py" />
         <option value="$PROJECT_DIR$/Tensorflow/deepfm/deepfm_spark.py" />
-        <option value="$PROJECT_DIR$/Tensorflow/deepfm/deepfm.py" />
         <option value="$PROJECT_DIR$/featureEngineering/spark/explore_nlp_spark.py" />
         <option value="$PROJECT_DIR$/featureEngineering/spark/explore_face_spark.py" />
         <option value="$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py" />
         <option value="$PROJECT_DIR$/MechineLearning/lrgbdt.py" />
         <option value="$PROJECT_DIR$/README.md" />
+        <option value="$PROJECT_DIR$/Tensorflow/deepfm/deepfm.py" />
       </list>
     </option>
   </component>
@@ -700,7 +693,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="1152" max-vertical-offset="6720">
           <caret line="265" column="22" selection-start-line="265" selection-start-column="22" selection-end-line="265" selection-end-column="22" />
-          <folding />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -952,14 +947,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Tensorflow/deepfm/deepfm.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="7301" max-vertical-offset="8184">
-          <caret line="324" column="42" selection-start-line="324" selection-start-column="42" selection-end-line="324" selection-end-column="42" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="jar://D:/spark-2.3.2-bin-hadoop2.7/python/lib/pyspark.zip!/pyspark/mllib/tree.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.25223213" vertical-offset="2030" max-vertical-offset="15552">
@@ -1048,21 +1035,31 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/README.md">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-18.96" vertical-offset="11574" max-vertical-offset="12432">
+          <caret line="502" column="29" selection-start-line="502" selection-start-column="29" selection-end-line="502" selection-end-column="29" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="4386" max-vertical-offset="8472">
-          <caret line="196" column="8" selection-start-line="196" selection-start-column="8" selection-end-line="197" selection-end-column="32" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="3594" max-vertical-offset="8472">
+          <caret line="176" column="22" selection-start-line="176" selection-start-column="22" selection-end-line="176" selection-end-column="22" />
           <folding>
             <element signature="e#25#68#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/README.md">
+    <entry file="file://$PROJECT_DIR$/Tensorflow/deepfm/deepfm.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.55244756" vertical-offset="11574" max-vertical-offset="12432">
-          <caret line="502" column="32" selection-start-line="502" selection-start-column="32" selection-end-line="502" selection-end-column="32" />
-          <folding />
+        <state vertical-scroll-proportion="0.4348811" vertical-offset="0" max-vertical-offset="8736">
+          <caret line="16" column="34" selection-start-line="16" selection-start-column="34" selection-end-line="16" selection-end-column="34" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
