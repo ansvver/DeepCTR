@@ -311,7 +311,7 @@ if __name__ == '__main__':
                         # print(X_index)
                         # print(X_value)
                         # print(y)
-                        '''报错的原因是因为改行数据中存在nan值，导致loss为nan'''
+                        '''报错的原因是因为该行数据中存在nan值，导致loss为nan'''
                         loss, step = Model.train(sess, X_index, X_value, y)
                         '''
                         print('保存方式一：每训练完一代的时候，都进行了保存，但后一次保存的模型会覆盖前一次的，最终只会保存最后一次')

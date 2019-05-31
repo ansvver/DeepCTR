@@ -7,6 +7,7 @@ import pyspark.sql.types as typ
 import os
 import gc
 import pyspark.sql.functions as fn
+# import pyspark.sql.functions  as psf
 from pyspark.sql import Row
 from pyspark.sql.functions import monotonically_increasing_id
 from pyspark.ml.feature import StandardScaler, VectorAssembler
@@ -154,6 +155,50 @@ class SparkFEProcess:
         df_test=df_test.na.fill({'title_topic': -1})
 
 
+        #对连续变量填充缺失值
+        print('输出各均值')
+        df=df_train.union(df_test)
+        mean_val = df.select(fn.mean(df['beauty'])).collect()
+        mean_beauty = mean_val[0][0] # to show the number
+        print(mean_beauty)
+        mean_val = df.select(fn.mean(df['relative_position_0'])).collect()
+        mean_relative_position0 = mean_val[0][0] # to show the number
+        print(mean_relative_position0)
+        mean_val = df.select(fn.mean(df['relative_position_1'])).collect()
+        mean_relative_position1 = mean_val[0][0] # to show the number
+        print(mean_relative_position1)
+        mean_val = df.select(fn.mean(df['relative_position_2'])).collect()
+        mean_relative_position2 = mean_val[0][0] # to show the number
+        print(mean_relative_position2)
+        mean_val = df.select(fn.mean(df['relative_position_3'])).collect()
+        mean_relative_position3 = mean_val[0][0] # to show the number
+        print(mean_relative_position3)
+
+        del df
+        gc.collect()
+
+        df_train=df_train.na.fill({'gender': -1, 'beauty': mean_beauty,'relative_position_0': mean_relative_position0, \
+                       'relative_position_1': mean_relative_position1,'relative_position_2': mean_relative_position2,\
+                       'relative_position_3': mean_relative_position3})
+        df_test=df_test.na.fill({'gender': -1, 'beauty': mean_beauty,'relative_position_0': mean_relative_position0, \
+                       'relative_position_1': mean_relative_position1,'relative_position_2': mean_relative_position2,\
+                       'relative_position_3': mean_relative_position3})
+
+        print('填充缺失以后')
+        print('查看训练集中每一列的缺失比例')
+        df_train.agg(*[(1-(fn.count(c) /fn.count('*'))).alias(c+'_missing') for c in df_train.columns]).show()
+        print('查看测试集中每一列的缺失比例')
+        df_test.agg(*[(1-(fn.count(c) /fn.count('*'))).alias(c+'_missing') for c in df_test.columns]).show()
+
+
+        #保存df_train,df_test到本地
+
+        localPath='/data/code/DeepCTR/data/dataForSkearn/'
+        #可能存在的问题，内存溢出
+        df_train.toPandas().to_csv(localPath+"train.csv",index=False)
+        df_test.toPandas().to_csv(localPath+"test.csv",index=False)
+
+
         return df_train,df_test
 
 
@@ -197,9 +242,7 @@ class SparkFEProcess:
         co_col_undeal1=['relative_position_0','relative_position_1','relative_position_2','relative_position_3',\
                      'beauty',]   #这部分是连续变量，缺失部分已经用均值填充过了，同时其最大最小值都在0-1之间，因此不需要再做额外的处理
 
-
         #不参与训练的列 ：item_id\uid
-
         #对连续变量做标准化处理
         for col in co_col:
             scaler = StandardScaler(inputCol=col, outputCol="scaled"+col,    withStd=True, withMean=True)
@@ -345,4 +388,4 @@ if __name__ == "__main__":
     spark_job = SparkFEProcess()
 
     df_train,df_test=spark_job.data_describe()
-    # spark_job.data_process(df_train,df_test)
+    spark_job.data_process(df_train,df_test)

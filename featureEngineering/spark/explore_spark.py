@@ -10,7 +10,7 @@ import pyspark.sql.types as typ
 import pyspark.sql.functions as fn
 import datetime
 from pyspark.sql.functions import udf
-
+from pyspark.sql.functions import monotonically_increasing_id
 import numpy as np
 import gc
 
@@ -96,15 +96,14 @@ class SparkFEProcess:
         dfactionLog_train = sqlContext.createDataFrame(actionLogRdd_train, actionLogSchema)
         dfactionLog_test = sqlContext.createDataFrame(actionLogRdd_test, actionLogSchema)
 
+        #train和test合并，并且保存保存train的数量，以便拆分
+        df=dfactionLog_train.union(dfactionLog_test)
+        train_count=dfactionLog_train.count()
 
-        return dfactionLog_train,dfactionLog_test
+
+        return df,train_count
 
     def bining(self,sqlContext,df,col,percent_list):
-        # 不想给定分类标准，可以让spark自动给我们分箱
-        #//和Bucketizer类似：将连续数值特征转换离散化。但这里不再自己定义splits（分类标准），而是定义分几箱就可以了。
-        # val quantile = new QuantileDiscretizer().setNumBuckets(5).setInputCol("age").setOutputCol("quantile_feature")
-        # //因为事先不知道分桶依据，所以要先fit,相当于对数据进行扫描一遍，取出分位数来，再transform进行转化。
-        # val quantiledf = quantile.fit(df).transform(df)
         '''
         :param sqlContext:
         :param df:
@@ -149,7 +148,7 @@ class SparkFEProcess:
         return df
 
 
-    def data_explore(self,df_train,df_test):
+    def data_explore(self,df,train_count):
         # print('-------1.统计并汇总用户行为数据-------')
         # desc = df.describe()
         # desc.show()
@@ -200,34 +199,33 @@ class SparkFEProcess:
         print(df_train.filter("duration_time > 0 and duration_time <=60" ).count())  #19621510
         print(df_train.filter("duration_time > 60 and duration_time <=300" ).count())  #383
         '''
-
+        df=df.filter(df['duration_time']<=300)
         #将 unix 格式的时间戳转换为指定格式的日期,提取小时
-        df_train=df_train.withColumn('item_pub_hour',fn.from_unixtime(df_train.time , "h")).cast(typ.IntegerType())
+        df=df.withColumn('item_pub_hour',fn.from_unixtime(df.time , "h").cast(typ.IntegerType()))
+        # df_train=df_train.withColumn('item_pub_hour',df_train.item_pub_hour)
 
         #time列在这里就可以删掉了  cast(typ.IntegerType)
-        df_train=df_train.drop('time')
+        df=df.drop('time')
         # df_train.show(truncate=False)
 
         print('对user_city进行统计，根据finish、like的情况，划分城市等级，后对测试集相关字段进行映射')
         print('为item_city分组求finish、like列均值，再将两列的值按比例求和')
 
-        df_user_city_score=self.city_col_deal(df_train,'user_city')
+        df_user_city_score=self.city_col_deal(df,'user_city')
         percent_list=[0,5,50,95,100]
         dfUserCityScore_spark=self.bining(sqlContext,df_user_city_score,"user_city_score",percent_list)
         # dfUserCityScore_spark.show()
 
-        df_item_city_score=self.city_col_deal(df_train,'item_city')
+        df_item_city_score=self.city_col_deal(df,'item_city')
         percent_list=[0,10,30,70,90,100]
         dfItemCityScore_spark=self.bining(sqlContext,df_item_city_score,"item_city_score",percent_list)
         # dfItemCityScore_spark.show()
 
 
-
-
         print('-------4.统计并汇总用户行为数据-------')
 
         #device出现的次数
-        dfDeviceCount = df_train.groupby('device').count() \
+        dfDeviceCount = df.groupby('device').count() \
              .withColumnRenamed("count", "device_Cnt")
         print('device出现次数')
         # dfDeviceCount.show(10)
@@ -235,7 +233,7 @@ class SparkFEProcess:
         dfDeviceCount_spark=self.bining(sqlContext,dfDeviceCount,"device_Cnt",percent_list)
 
         #author_id出现的次数
-        dfAuthoridCount = df_train.groupby('author_id').count() \
+        dfAuthoridCount = df.groupby('author_id').count() \
              .withColumnRenamed("count", "authorid_Cnt")
         print('authorid出现次数')
         # dfAuthoridCount.show(10)
@@ -244,7 +242,7 @@ class SparkFEProcess:
         dfAuthoridCount_spark=self.bining(sqlContext,dfAuthoridCount,"authorid_Cnt",percent_list)
 
         #music_id出现的次数
-        dfMusicidCount = df_train.where(df_train['music_id']!=-1).groupby('music_id').count() \
+        dfMusicidCount = df.where(df['music_id']!=-1).groupby('music_id').count() \
              .withColumnRenamed("count", "musicid_Cnt")
         print('musicic出现次数')
         # dfMusicidCount.show(10)
@@ -253,7 +251,7 @@ class SparkFEProcess:
 
 
         # 一个用户观看的视频数
-        dfCntUserPlayVideo = df_train.groupby('uid') \
+        dfCntUserPlayVideo = df.groupby('uid') \
             .agg({"item_id": "count"}) \
             .withColumnRenamed("count(item_id)", "uid_playCnt")
         print('一个用户观看的视频数')
@@ -262,7 +260,7 @@ class SparkFEProcess:
         dfCntUserPlayVideo_spark=self.bining(sqlContext,dfCntUserPlayVideo,"uid_playCnt",percent_list)
 
         #每个视频被多少用户观看
-        dfCntvidPlayVideo = df_train.groupby('item_id') \
+        dfCntvidPlayVideo = df.groupby('item_id') \
             .agg({"uid": "count"}) \
             .withColumnRenamed("count(uid)", "itemid_playCnt")
         print('每个视频被多少用户观看')
@@ -270,7 +268,7 @@ class SparkFEProcess:
         percent_list=[50,65,85,95,100]
         dfCntvidPlayVideo_spark=self.bining(sqlContext,dfCntvidPlayVideo,"itemid_playCnt",percent_list)
 
-        df_train_bin=df_train.join(dfDeviceCount_spark,'device','left') \
+        df_bin=df.join(dfDeviceCount_spark,'device','left') \
                     .join(dfAuthoridCount_spark,'author_id','left') \
                     .join(dfMusicidCount_spark,'music_id','left') \
                     .join(dfCntUserPlayVideo_spark,'uid','left') \
@@ -280,23 +278,29 @@ class SparkFEProcess:
         # .join(df_item_hour,'item_id','left') \
         #删除没有必要的列
         unuse_col=['item_city','user_city','device','author_id','music_id',]  #'uid','item_id'这两列不能删除，后面提交结果的时候应该要用到
-        df_train_bin=self.dropUnuseCols(df_train_bin,unuse_col)
+        df_bin=self.dropUnuseCols(df_bin,unuse_col)
 
         # df_train_bin.show(10)
         # 给表中为null的字段填充为-1，例如，给musicid_Cnt_bin中的null，填充为-1
-        df_train_bin=df_train_bin.na.fill(-1)
+        df_bin=df_bin.na.fill(-1)
         # df_train_bin.show(truncate=False)
         # desc = df_train_bin.describe()
         # desc.show()
         # print('返回各列名和数据类型')
         # print(df_train_bin.dtypes)
+        #根据train_count拆分训练集和测试集
 
+        df_bin=df_bin.repartition(1).withColumn("id", monotonically_increasing_id())
+        df_train_bin=df_bin.filter(df_bin['id']<train_count).drop('id').repartition(300)
+        df_test_bin=df_bin.filter(df_bin['id']>=train_count).drop('id').repartition(300)
 
         #对测试集进行分箱处理
         #item_id  item_hour 不需要进行join  根据自身运算得到即可
-        #将 unix 格式的时间戳转换为指定格式的日期,提取小时,#将string类转化为int类型
-        df_test=df_test.withColumn('item_pub_hour', fn.from_unixtime(df_test.time , "h")).cast(typ.IntegerType())
-
+        #将 unix 格式的时间戳转换为指定格式的日期,提取小时
+        '''
+        df_test=df_test.withColumn('item_pub_hour', fn.from_unixtime(df_test.time , "h"))
+        #将string类转化为int类型
+        df_test=df_test.withColumn('item_pub_hour',df_test.item_pub_hour.cast(typ.IntegerType()))
         df_test=df_test.drop('time')
         df_test_bin=df_test.join(dfDeviceCount_spark,'device','left') \
                     .join(dfAuthoridCount_spark,'author_id','left') \
@@ -325,10 +329,9 @@ class SparkFEProcess:
         del dfUserCityScore_spark
         del dfItemCityScore_spark
         gc.collect()
+        '''
 
-        #df_train_bin,df_test_bin保存后读取
-        # item_id,uid,music_id,author_id,device,user_city,item_city,channel,finish,like,time,duration_time,uid_Cnt,,device_Cnt,
-        # authorid_Cnt,musicid_Cnt,uid_playCnt,itemid_playCnt,item_pub_hour
+
 
         print('-------5.保存数据预处理结果-------')
         test_file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'actLog_test_bin'
@@ -367,14 +370,6 @@ class SparkFEProcess:
         #显示save有问题
         # df_user_city_score.write.format('csv').mode('overwrite').option("header", "true").save("/user/hadoop/icmechallenge2019/track2/data/user_city_score1.csv")
 
-        #保存csv文件
-        # def toCSVLine(data):
-        #   return ','.join(str(d) for d in data)
-        #
-        # lines = labelsAndPredictions.map(toCSVLine)
-        # lines.saveAsTextFile('hdfs://my-node:9000/tmp/labels-and-predictions.csv')
-
-
         # ca_col_before = ['uid', 'user_city', 'item_id', 'author_id', 'item_city', 'channel',
         #                'music_id', 'device',]
         # co_col = ['duration_time']  # track2_time作品发布时间，作品时长
@@ -398,6 +393,6 @@ class SparkFEProcess:
 if __name__ == "__main__":
     spark_job = SparkFEProcess()
 
-    dfactionLog_train,dfactionLog_test=spark_job.data_describe()
+    df,train_count=spark_job.data_describe()
 
-    spark_job.data_explore(dfactionLog_train,dfactionLog_test)
+    spark_job.data_explore(df,train_count)

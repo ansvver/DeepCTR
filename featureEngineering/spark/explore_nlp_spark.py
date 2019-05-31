@@ -38,6 +38,7 @@ class SparkFEProcess:
     #     parser = configparser.ConfigParser()
     #     parser.read(config_file)
     #     return  parser
+
     def init_config(self):
         current_path = os.path.dirname(os.path.realpath(__file__))
         workspace_path = current_path.split('featureEngineering')[0]
@@ -219,12 +220,12 @@ class SparkFEProcess:
         '''
 
         #保存ldaModel,训练集转化的时候直接加载该模型,目前没有必要保存模型，保存df_topic即可
-        '''
+
         distributed_model_path = self.parser.get("hdfs_path", "hdfs_data_path") + "lda_distributed_model"
         ldaModel.save(distributed_model_path)
         #加载的语句
         sameLdaModel = DistributedLDAModel.load(distributed_model_path)
-        '''
+
         # ---------------------------------3 模型及描述------------------------------
         # 模型通过describeTopics、topicsMatrix来描述
         '''

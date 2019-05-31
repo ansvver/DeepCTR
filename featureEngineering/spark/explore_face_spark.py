@@ -135,6 +135,10 @@ class SparkFEProcess:
         print('查看每行记录的缺失值')
         print(df.rdd.map(lambda row:(row['item_id'],sum([c==None for c in row]))).toDF('item_id','sum_none').filter('sum_none'>0).count())
         '''
+
+        '''
+        #缺失值在这里不做处理，等后面将三表关联后再填充均值
+
         # 类别变量缺失值填充为-1,连续变量缺失值填充为均值
         print('输出各均值')
         mean_val = df.select(psf.mean(df['beauty'])).collect()
@@ -160,6 +164,7 @@ class SparkFEProcess:
         print('填充缺失以后')
         df.show(2,truncate=False)
         # print(df.columns)
+        '''
 
 
         print('-------5.保存数据预处理结果-------')
