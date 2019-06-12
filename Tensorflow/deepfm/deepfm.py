@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import sys
+from sklearn.metrics import roc_auc_score
 # from Tensorflow.build_data import *
 import pandas as pd
 from hdfs.client import Client
@@ -16,8 +17,11 @@ class Args():
     batch_size = 64
     learning_rate = 0.01 #或者0.001 学习率选择过小，会出现收敛速度慢的情况
     l2_reg_rate = 0.01
+    eval_metric=roc_auc_score,
     checkpoint_dir = '/data/code/DeepCTR/data/saver/ckpt'
     is_training = True
+    #is_training = False
+
     # deep_activation = tf.nn.relu
 
 
@@ -28,6 +32,7 @@ class model():
         self.embedding_size = args.embedding_size
         self.deep_layers = args.deep_layers
         self.l2_reg_rate = args.l2_reg_rate
+        self.eval_metric=args.eval_metric,
 
         self.epoch = args.epoch
         self.batch_size = args.batch_size
@@ -202,13 +207,35 @@ class model():
         })
         return result
 
+    def evaluate(self, sess, Xi, Xv, y):
+        """
+        :param Xi: list of list of feature indices of each sample in the dataset
+        :param Xv: list of list of feature values of each sample in the dataset
+        :param y: label of each sample in the dataset
+        :return: metric of the evaluation
+        """
+        y_pred = self.predict(sess, Xi, Xv)
+        # print('查看y和y_pred的返回形式有何不同')
+        #
+        # print(np.array(y_pred).shape)
+        # print(np.array(y_pred)[0].shape)
+        # print(y.shape)
+        #
+        # print(np.array(np.array(y_pred)[0]))
+        # print(y)
+
+        return roc_auc_score(y,np.array(np.array(y_pred)[0]))
+
+    #train_result = self.evaluate(Xi_train, Xv_train, y_train)
+
     def save(self, sess, path):
-        saver = tf.train.Saver()
+        saver = tf.train.Saver(tf.global_variables())
+        #saver = tf.train.Saver()
         # saver=tf.train.Saver(max_to_keep=3)
         saver.save(sess, save_path=path)
 
     def restore(self, sess, path):
-        saver = tf.train.Saver()
+        saver = tf.train.Saver(tf.global_variables())
         saver.restore(sess, save_path=path)
 
     def print_num_of_total_parameters(self, output_detail=False, output_to_logging=False):
@@ -238,7 +265,6 @@ class model():
             print("Total %d variables, %s params" % (len(tf.trainable_variables()), "{:,}".format(total_parameters)))
 
 
-
 def get_batch(Xi, Xv, y, batch_size, index):
     start = index * batch_size
     end = (index + 1) * batch_size
@@ -254,31 +280,52 @@ if __name__ == '__main__':
 
     #对finish和like进行分别训练
     traindata={}
-    localPath='/data/code/DeepCTR/data/'
+    localPath='/data/code/DeepCTR/data/dataForDeepfmTest/'
     print('读取feat_dim.txt中的值，即feature_sizes')
     f = open(localPath+"feat_dim.txt","r")
-    traindata['feat_dim']=int(f.read())
+    feat_dim=int(f.read())
     f.close()
+    traindata['feat_dim']=feat_dim
+
+
+
     #循环读取数据，不断迭代
     min_loss=float("inf")
+
     for i in range(10):
+        if i<9:
+            args.is_training = True
+        else:
+            args.is_training = False
+        '''
+        input_filename='df_concate_'+str(i)+'.csv'
+        inputfile=pd.read_csv(localPath+input_filename)
+        #inputfile中选择列
+        feature_index=inputfile.ix[:,[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]]
+        feature_value=inputfile.ix[:,[18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33]]
+        label_finish=inputfile.ix[:,[34]].values
+        label_like=inputfile.ix[:,[35]].values
+
+        traindata['xi'] = feature_index.values.tolist()  #变成了list
+        traindata['xv'] = feature_value.values.tolist()
+
+        label_finish = label_finish.reshape(len(label_finish), 1)
+        label_like = label_like.reshape(len(label_like), 1)
+        traindata['y_train_finish'] = label_finish
+        traindata['y_train_like'] = label_like
+        '''
+
 
         index_filename='train_feature_index_'+str(i)+'.csv'
         value_filename='train_feature_value_'+str(i)+'.csv'
         label_filename='train_label_'+str(i)+'.csv'
 
-        feature_index=pd.read_csv(localPath+index_filename)  #如果是从hdfs上get下来的，在read_csv的时候指定数据类型
+        feature_index=pd.read_csv(localPath+index_filename)
         feature_value=pd.read_csv(localPath+value_filename)
-
-        print(feature_index.head(5))
-        print(feature_value.head(5))
-
         traindata['xi'] = feature_index.values.tolist()  #变成了list
         traindata['xv'] = feature_value.values.tolist()
-        print(traindata['xi'][0:5])
-        print(traindata['xv'][0:5])
 
-        print('读取标签文件')
+        print('读取标签文件'+str(i))
         train_label=pd.read_csv(localPath+label_filename)
         label_finish=train_label['finish'].values
         label_like=train_label['like'].values
@@ -291,7 +338,7 @@ if __name__ == '__main__':
 
         args.feature_sizes = traindata['feat_dim']
         args.field_size = len(traindata['xi'][0])
-        args.is_training = True
+
 
         with tf.Session(config=gpu_config) as sess:
             Model = model(args)
@@ -313,46 +360,68 @@ if __name__ == '__main__':
                         # print(y)
                         '''报错的原因是因为该行数据中存在nan值，导致loss为nan'''
                         loss, step = Model.train(sess, X_index, X_value, y)
+
                         '''
                         print('保存方式一：每训练完一代的时候，都进行了保存，但后一次保存的模型会覆盖前一次的，最终只会保存最后一次')
                         if j % 100 == 0:  #每100次迭代输出一次loss结果
                             print('the times of training is %d, and the loss is %s' % (j, loss))
                             Model.save(sess, args.checkpoint_dir)
                         '''
-
-                        print('保存方式二：想保存验证精度最高的一代，则加个中间变量和判断语句就可以了')
+                        #print('保存方式二：想保存验证精度最高的一代，则加个中间变量和判断语句就可以了')
                         if loss < min_loss:
-                            min_loss=loss
-                            Model.save(sess, args.checkpoint_dir)
+                            min_loss = loss
+                            try:
+                              train_auc= Model.evaluate(sess, X_index, X_value, y)
+                              if train_auc>0.8:
+                                Model.save(sess, args.checkpoint_dir)
+                                print('保留最好模型的loss及其对应的auc指标')    #由之前的训练可见，每个batch的数据差异太大
+                                print('loss:',min_loss,'train_auc:',train_auc)
+
+                            except Exception as e:
+                                print(e)
+
+
+
+                            '''
+                            保留最好模型的loss及其对应的auc指标
+                            loss: 0.3449938 train_auc: 0.888888888888889
+                            保留最好模型的loss及其对应的auc指标
+                            loss: 0.32813254 train_auc: 0.007936507936507964
+                            '''
+
                         '''
                         print('保存方式三：保存验证精度最高的三代，且把每次的验证精度也随之保存下来，则我们可以生成一个txt文件用于保存')
                         print('Model.save函数中添加max_to_keep,saver=tf.train.Saver(max_to_keep=3)')
                         '''
             else:
-                #读取测试数据
-                testdata={}
-                testdata['feat_dim']=int(f.read())
-                index_filename='test_feature_index.csv'
-                value_filename='test_feature_value.csv'
-                label_filename='test_label.csv'
+                # #读取测试数据
+                # testdata={}
+                # testdata['feat_dim']=feat_dim
+                # index_filename='test_feature_index.csv'
+                # value_filename='test_feature_value.csv'
+                # label_filename='test_label.csv'
+                #
+                # feature_index=pd.read_csv(localPath+index_filename)
+                # feature_value=pd.read_csv(localPath+value_filename)
+                #
+                # testdata['xi'] = feature_index.values.tolist()  #变成了list
+                # testdata['xv'] = feature_value.values.tolist()
+                #
+                # print('读取测试集的标签文件')
+                # test_label=pd.read_csv(localPath+label_filename)
+                # label_finish=test_label['finish'].values
+                # label_like=test_label['like'].values
+                # label_finish = label_finish.reshape(len(label_finish), 1)
+                # label_like = label_like.reshape(len(label_like), 1)
+                # testdata['y_test_finish'] = label_finish
+                # testdata['y_test_like'] = label_like
 
-                feature_index=pd.read_csv(localPath+index_filename)
-                feature_value=pd.read_csv(localPath+value_filename)
-
-                testdata['xi'] = feature_index.values.tolist()  #变成了list
-                testdata['xv'] = feature_value.values.tolist()
-
-                print('读取测试集的标签文件')
-                test_label=pd.read_csv(localPath+label_filename)
-                label_finish=test_label['finish'].values
-                label_like=test_label['like'].values
-                label_finish = label_finish.reshape(len(label_finish), 1)
-                label_like = label_like.reshape(len(label_like), 1)
-                traindata['y_test_finish'] = label_finish
-                traindata['y_test_like'] = label_like
-
+                #第10份数据当做是测试集，这样可以知道auc的值
                 Model.restore(sess, args.checkpoint_dir)
                 for j in range(0, cnt):
-                    X_index, X_value, y = get_batch(testdata['xi'], testdata['xv'], testdata['y_test_finish'], args.batch_size, j)
-                    result = Model.predict(sess, X_index, X_value)
-                    print(result)
+                    X_index, X_value, y = get_batch(traindata['xi'], traindata['xv'], traindata['y_test_finish'], args.batch_size, j)
+                    #result = Model.predict(sess, X_index, X_value)
+                    test_auc= Model.evaluate(sess, X_index, X_value, y)
+                    print('test_auc:',test_auc)
+
+                    #print(result[:10])  #预估点击概率,范围[0,1]

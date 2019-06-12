@@ -7,6 +7,7 @@ import pyspark.sql.types as typ
 import os
 import gc
 import pyspark.sql.functions as fn
+from pyspark.sql.functions import udf
 # import pyspark.sql.functions  as psf
 from pyspark.sql import Row
 from pyspark.sql.functions import monotonically_increasing_id
@@ -19,7 +20,7 @@ class SparkFEProcess:
 
         self.parser = self.init_config()
 
-        sparkConf = SparkConf().setAppName("feature engineering on spark") \
+        sparkConf = SparkConf().setAppName("build data for deepfm") \
             .set("spark.ui.showConsoleProgress", "false") \
             .set("set spark.sql.execution.arrow.enabled","true")
         self.sc = SparkContext(conf=sparkConf)
@@ -189,8 +190,8 @@ class SparkFEProcess:
 
         localPath='/data/code/DeepCTR/data/dataForSkearn/'
         #可能存在的问题，内存溢出
-        df_train.toPandas().to_csv(localPath+"train.csv",index=False)
-        df_test.toPandas().to_csv(localPath+"test.csv",index=False)
+        # df_train.toPandas().to_csv(localPath+"train.csv",index=False)
+        # df_test.toPandas().to_csv(localPath+"test.csv",index=False)
 
 
         return df_train,df_test
@@ -198,15 +199,54 @@ class SparkFEProcess:
 
 
 
-    def data_process(self,df_train,df_test):
-        ''' 这里将df_train和df_test一起处理，可能会导致后面无法区分df_train和df_test,因为
-            repartition(1).withColumn("id", monotonically_increasing_id()之后数据就乱掉了，需要再仔细检查一遍代码'''
+    def build_data(self):
+        sqlContext = SQLContext(self.sc)
+        rootPath=self.parser.get("hdfs_path", "hdfs_data_path")
+        print('start to read df_test')
+        test_file_path = rootPath + 'df_test'
+        actLog_test_rdd = self.sc.pickleFile(test_file_path)
+
+
+        labels=[
+                ('item_id',typ.IntegerType()),
+                ('uid',typ.IntegerType()),
+                ('channel',typ.IntegerType()),
+                ('finish',typ.IntegerType()),
+                ('like',typ.IntegerType()),
+                ('duration_time',typ.IntegerType()),
+                ('item_pub_hour',typ.IntegerType()),
+                ('device_Cnt_bin',typ.IntegerType()),
+                ('authorid_Cnt_bin',typ.IntegerType()),
+                ('musicid_Cnt_bin',typ.IntegerType()),
+                ('uid_playCnt_bin',typ.IntegerType()),
+                ('itemid_playCnt_bin',typ.IntegerType()),
+                ('user_city_score_bin',typ.IntegerType()),
+                ('item_city_score_bin',typ.IntegerType()),
+                ('title_topic',typ.IntegerType()),
+                ('gender',typ.IntegerType()),
+                ('beauty',typ.DoubleType()),
+                ('relative_position_0',typ.DoubleType()),
+                ('relative_position_1',typ.DoubleType()),
+                ('relative_position_2',typ.DoubleType()),
+                ('relative_position_3',typ.DoubleType())
+            ]
+        actionLogSchema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
+        df_test = sqlContext.createDataFrame(actLog_test_rdd,actionLogSchema)
+
+        print('start to read actLog_train_bin')
+        train_file_path = rootPath + 'df_train'
+        actLog_train_rdd = self.sc.pickleFile(train_file_path)
+        df_train = sqlContext.createDataFrame(actLog_train_rdd,actionLogSchema)
+
+        df_train.show(5,truncate=False)
+
 
         df_train_count=df_train.count()
+        print(df_train_count)
         print('df_train_count:19622340')     #全部记录数：22384139
         print('df_test_count:2761799')
 
-        localPath='/data/code/DeepCTR/data/dataForDeepfm/'
+        localPath='/data/code/DeepCTR/data/dataForDeepfmTest611/'
         train_label = df_train['finish','like']
         test_label = df_test['finish','like']
         print('保存test_label')
@@ -222,7 +262,7 @@ class SparkFEProcess:
         # df.select('duration_time_feature').show(5)
 
         ca_col = [ 'channel','item_pub_hour','device_Cnt_bin','authorid_Cnt_bin','musicid_Cnt_bin', \
-                  'uid_playCnt_bin','itemid_playCnt_bin','user_city_score_bin','item_city_score_bin' ,'title_topic']
+                  'uid_playCnt_bin','itemid_playCnt_bin','user_city_score_bin','item_city_score_bin' ,'title_topic','gender']
         co_col=['duration_time','relative_position_0','relative_position_1','relative_position_2','relative_position_3',\
                      'beauty',]   #这部分是连续变量，缺失部分已经用均值填充过了，同时其最大最小值都在0-1之间，因此不需要再做额外的处理
 
@@ -265,6 +305,57 @@ class SparkFEProcess:
                 feature_value_train=feature_value_train.withColumn(i, fn.lit(1))
 
 
+        #方案二
+        idx = 0
+        def add_index(df):
+            print(df.count())
+            index_list = [x for x in range(1, df.count()+1)]  # 构造一个列表存储索引值，用生成器会出错
+            # 定义一个函数
+            def set_index(x):
+                global idx    # 将idx设置为全局变量
+                if x is not None:
+                    idx += 1
+                    return index_list[idx-1]
+            index = udf(set_index, typ.IntegerType())    # udf的注册，这里需要定义其返回值类型
+            df1=df.select(fn.col("*"), index("channel").alias("id"))  # udf的注册的使用，alias方法用于修改列名,报错TypeError: 'str' object is not callable
+            #df1.show()
+            return df1
+
+        feature_index_train=add_index(feature_index_train)
+        feature_value_train=add_index(feature_value_train)
+        print("观察add_index")
+        feature_index_train.show(5,truncate=False)
+        feature_value_train.show(5,truncate=False)
+        #由于feature_index和feature_value的字段名都是一样的，所以需要对feature_value的字段名修改一下，以示区别
+        train_label=add_index(train_label)
+
+        df_concate=feature_index_train.join(feature_value_train,'id','left') \
+                    .join(train_label,'id','left')
+        print("各字段的区别")
+        df_concate.show(5,truncate=False)
+
+
+        print('-------.开始保存训练数据-------')
+
+        #将训练集划分成10份，
+        segList= [i for i in range(0,df_train_count+1,df_train_count//10)]
+        # print('train存储方案一：toPandas()后保存到本地')
+        for i in range(len(segList)):
+            if i <=9:
+                df_concate_i=df_concate.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
+                df_concate_i.toPandas().to_csv(localPath+"df_concate_"+str(i)+".csv",index=False)   #17+17+2
+                # train_feature_index_i=feature_index_train.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
+                # train_feature_value_i=feature_value_train.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
+                # train_label_i=train_label.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
+                #
+                # train_feature_index_i.toPandas().to_csv(localPath+"train_feature_index_"+str(i)+".csv",index=False)
+                # train_feature_value_i.toPandas().to_csv(localPath+"train_feature_value_"+str(i)+".csv",index=False)
+                # train_label_i.toPandas().to_csv(localPath+"train_label_"+str(i)+".csv",index=False)
+        print("训练数据保存结束")
+
+
+
+        print("开始处理测试数据")
         feature_value_test=df.select(co_col+ca_col)
         #创建一个与feature_value相同的dataFrame
         feature_index_test = feature_value_test
@@ -284,60 +375,48 @@ class SparkFEProcess:
                 feature_index_test=feature_index_test.replace(k,v,i)  #k,v都是list，对i列中的k用v来替代
                 feature_value_test=feature_value_test.withColumn(i, fn.lit(1))
 
+        print('test数据开始存储：toPandas()后保存到本地')  #这一步没有保存，报错java.net.SocketException: Connection reset
+        feature_index_test.toPandas().to_csv(localPath+"test_feature_index.csv",index=False)
+        feature_value_test.toPandas().to_csv(localPath+"test_feature_value.csv",index=False)
 
         #划分训练集和测试集，这里已经导致无法正确划分训练集和测试集了
         #？？？？？？如何区分训练集和测试集？？？？？？？？
         #方案：在repartition(1)之前就划分好训练集和测试集，再repartition(1)---yes
         #feature_index有很多分区
+        ''''
+        print("方案一")
         print("取前100条数据观察")
-        print(train_label.limit(100))
+        print("index和value是一一对应的")
+
+        feature_index_train.limit(20).show(100)
+        feature_value_train.limit(20).show(100)
+        print("index和value还是一一对应的吗？")
+        feature_index_train.coalesce(1).limit(20).show(100)
+        feature_value_train.coalesce(1).limit(20).show(100)
+
+        train_label.limit(100).show(100)
+        train_label.coalesce(1).limit(100).show(100)
+
+
+        print("添加自增id,pyspark中只能先coalesce(1)再使用自增id，否则就是每个分区有自己的自增id")
+        feature_index_train=feature_index_train.coalesce(1).withColumn("id", monotonically_increasing_id())
+        feature_value_train=feature_value_train.coalesce(1).withColumn("id", monotonically_increasing_id())
+        train_label = train_label.coalesce(1).withColumn("id", monotonically_increasing_id())
+        '''
+
+
+
+
         print("一次性toPandas()到本地")
         feature_index_train.toPandas().to_csv(localPath+"train_feature_index.csv",index=False)
         feature_value_train.toPandas().to_csv(localPath+"train_feature_value.csv",index=False)
         train_label.toPandas().to_csv(localPath+"train_label.csv",index=False)
-
-        print("添加自增id,pyspark中只能先repartition(1)再使用自增id，否则就是每个分区有自己的自增id")
-        feature_index_train=feature_index_train.repartition(1).withColumn("id", monotonically_increasing_id())
-        feature_value_train=feature_value_train.repartition(1).withColumn("id", monotonically_increasing_id())
-        train_label = train_label.repartition(1).withColumn("id", monotonically_increasing_id())
-
-        print("取前100条数据观察，每一条是否与上面部分一一对应")
-        print( train_label.limit(100))
-        print("要么先用横向拼接，再拆分")
-
-
-        print('-------5.保存数据预处理结果-------')
-
-        #将训练集划分成10份，
-        segList= [i for i in range(0,df_train_count+1,df_train_count//10)]
-        # print('train存储方案一：toPandas()后保存到本地')
-        for i in range(len(segList)):
-            if i <=9:
-                # print(i)
-                # print(segList[i],segList[i+1])
-                train_feature_index_i=feature_index_train.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
-                train_feature_value_i=feature_value_train.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
-                train_label_i=train_label.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
-
-                train_feature_index_i.toPandas().to_csv(localPath+"train_feature_index_"+str(i)+".csv",index=False)
-                train_feature_value_i.toPandas().to_csv(localPath+"train_feature_value_"+str(i)+".csv",index=False)
-                train_label_i.toPandas().to_csv(localPath+"train_label_"+str(i)+".csv",index=False)
-
-        print('test存储方案一：toPandas()后保存到本地')
-        feature_index_test.toPandas().to_csv(localPath+"test_feature_index.csv",index=False)
-        feature_value_test.toPandas().to_csv(localPath+"test_feature_value.csv",index=False)
-        # test_label.toPandas().to_csv(localPath+"test_label.csv",index=False)
-
-
-        # print('test存储方案二：保存在hdfs上，用的时候再get下来')
-        # test_feature_index.rdd.mapPartitions(toCSVLineFromPartition).saveAsTextFile(path+"test_feature_index_"+str(i)+".csv")
-        # test_feature_value.rdd.mapPartitions(toCSVLineFromPartition).saveAsTextFile(path+"test_feature_value_"+str(i)+".csv")
-
 
 
 
 if __name__ == "__main__":
     spark_job = SparkFEProcess()
 
-    df_train,df_test=spark_job.data_describe()
-    spark_job.data_process(df_train,df_test)
+    # df_train,df_test=spark_job.data_describe()
+
+    spark_job.build_data()    #完成读取数据

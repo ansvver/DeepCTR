@@ -96,9 +96,21 @@ class SparkFEProcess:
         dfactionLog_train = sqlContext.createDataFrame(actionLogRdd_train, actionLogSchema)
         dfactionLog_test = sqlContext.createDataFrame(actionLogRdd_test, actionLogSchema)
 
-        #train和test合并，并且保存保存train的数量，以便拆分
+        dfactionLog_train=dfactionLog_train.filter(dfactionLog_train['duration_time']<=300)
+        dfactionLog_test=dfactionLog_test.filter(dfactionLog_test['duration_time']<=300)
+        #train和test合并，并且保存保存train的数量，以便拆分   union可能会改变frame中的顺序
         df=dfactionLog_train.union(dfactionLog_test)
         train_count=dfactionLog_train.count()
+        print("训练集的数量"+str(train_count))
+        test_count=dfactionLog_test.count()
+        print("训练集的数量"+str(test_count))
+
+        print('-------2.finish\like各特征下值的个数-------------')
+        df.agg( fn.countDistinct('finish').alias('finish_distinct'), \
+                fn.countDistinct('like').alias('like_distinct')
+                ).show()
+        print("各特征下的最大值,最小值")
+        df.describe().show()
 
 
         return df,train_count
@@ -149,80 +161,31 @@ class SparkFEProcess:
 
 
     def data_explore(self,df,train_count):
-        # print('-------1.统计并汇总用户行为数据-------')
-        # desc = df.describe()
-        # desc.show()
-        #
-        # print('-------2.各特征下值的个数-------------')
-        # df.agg(fn.countDistinct('uid').alias('uid_distinct'), \
-        #                 fn.countDistinct('user_city').alias('user_city_distinct'), \
-        #                 fn.countDistinct('item_id').alias('item_id_distinct'), \
-        #                 fn.countDistinct('author_id').alias('author_id_distinct'), \
-        #                 fn.countDistinct('item_city').alias('item_city_distinct'), \
-        #                 fn.countDistinct('channel').alias('channel_distinct'), \
-        #                 fn.countDistinct('finish').alias('finish_distinct'), \
-        #                 fn.countDistinct('like').alias('like_distinct'), \
-        #                 fn.countDistinct('music_id').alias('music_id_distinct'), \
-        #                 fn.countDistinct('device').alias('device_distinct')
-        #                 ).show()
+
 
         print('-------3.观察训练集和测试集的数据差异-------------')
         sqlContext = SQLContext(self.sc)
-        #对类别变量进行处理
-        #查看在测试集中出现的值，但在训练集中没有出现，对于uid来说，则是新用户，对于item_id来说，则是新item
-        # ca_col=['item_city']
-        # for col in ca_col:
-        #     us_train=df_train.select(col).distinct().rdd.map(lambda r: r[0]).collect()
-        #     us_test=df_test.select(col).distinct().rdd.map(lambda r: r[0]).collect()
-        #     ret = [ i for i in us_test if i not in us_train ]
-        #     print(col,len(ret))
-        '''
-        uid: 3263
-        user_city: 0
-        item_id:
-        author_id:
-        item_city: 5  测试集中有5个城市，在训练集中没有出现，后期训练集映射的时候，将这5个城市划分为一类，即小众城市
-        channel:
-        music_id:
-        device:
-       '''
-        #通过数据探索，发现duration_time中70000秒是异常数据，
-        #查看duration_time=0，duration_time>5*60的记录数，抖音视频时长范围为(0,300]
-        '''
-        print('检查duration_time中异常数据')
-        print('300+视频，看下用户对它的一些点击行为情况')
-        df_train.filter(df_train['duration_time']>300).show(223)
-        print(df_train.filter(df_train['duration_time']>300).select('item_id').distinct().count())
-        df_train.filter(df_train['duration_time']>300).select('item_id').distinct().show(223)
-        print(df_train.where(df_train['duration_time']==0).count())   #224
-        print(df_train.where(df_train['duration_time']>300).count())  #223
-        print(df_train.filter("duration_time > 0 and duration_time <=60" ).count())  #19621510
-        print(df_train.filter("duration_time > 60 and duration_time <=300" ).count())  #383
-        '''
-        df=df.filter(df['duration_time']<=300)
+
+        #作品发布时间-作品发布的最早时间,转化为day
+        time_min = df.select(fn.min(df['time'])).collect()
+        df=df.withColumn('time_day', ((df.time-fn.lit(time_min[0][0])) /fn.lit(3600 * 24)).cast(typ.IntegerType()))
+
         #将 unix 格式的时间戳转换为指定格式的日期,提取小时
         df=df.withColumn('item_pub_hour',fn.from_unixtime(df.time , "h").cast(typ.IntegerType()))
-        # df_train=df_train.withColumn('item_pub_hour',df_train.item_pub_hour)
 
-        #time列在这里就可以删掉了  cast(typ.IntegerType)
-        df=df.drop('time')
-        # df_train.show(truncate=False)
+        #df=df.drop('time')
 
-        print('对user_city进行统计，根据finish、like的情况，划分城市等级，后对测试集相关字段进行映射')
-        print('为item_city分组求finish、like列均值，再将两列的值按比例求和')
+        #print('-------4.统计并汇总用户行为数据-------')
+        print("计算各特征的count，包括交叉特征")
+        count_feats_list = []
+        count_feats_list.append(['time_day'])
 
-        df_user_city_score=self.city_col_deal(df,'user_city')
-        percent_list=[0,5,50,95,100]
-        dfUserCityScore_spark=self.bining(sqlContext,df_user_city_score,"user_city_score",percent_list)
-        # dfUserCityScore_spark.show()
+        print('single feature count')
+        count_feats_list.extend([[c] for c in df.columns if c not in ['time', 'channel', 'like', 'finish']])
+        print(count_feats_list)
 
-        df_item_city_score=self.city_col_deal(df,'item_city')
-        percent_list=[0,10,30,70,90,100]
-        dfItemCityScore_spark=self.bining(sqlContext,df_item_city_score,"item_city_score",percent_list)
-        # dfItemCityScore_spark.show()
+        print()
 
-
-        print('-------4.统计并汇总用户行为数据-------')
 
         #device出现的次数
         dfDeviceCount = df.groupby('device').count() \
@@ -246,6 +209,7 @@ class SparkFEProcess:
              .withColumnRenamed("count", "musicid_Cnt")
         print('musicic出现次数')
         # dfMusicidCount.show(10)
+        # dfMusicidCount.show(10)
         percent_list=[0,50,75,90,95,100]
         dfMusicidCount_spark=self.bining(sqlContext,dfMusicidCount,"musicid_Cnt",percent_list)
 
@@ -267,6 +231,22 @@ class SparkFEProcess:
         # dfCntvidPlayVideo.show(10)
         percent_list=[50,65,85,95,100]
         dfCntvidPlayVideo_spark=self.bining(sqlContext,dfCntvidPlayVideo,"itemid_playCnt",percent_list)
+        ##两列对city的处理是针对全部数据的处理，正好处理不妥当
+        print('对user_city进行统计，根据finish、like的情况，划分城市等级，后对测试集相关字段进行映射')
+        print('为item_city分组求finish、like列均值，再将两列的值按比例求和')
+
+        df_user_city_score=self.city_col_deal(df,'user_city')
+        percent_list=[0,5,50,95,100]
+        dfUserCityScore_spark=self.bining(sqlContext,df_user_city_score,"user_city_score",percent_list)
+        # dfUserCityScore_spark.show()
+
+        df_item_city_score=self.city_col_deal(df,'item_city')
+        percent_list=[0,10,30,70,90,100]
+        dfItemCityScore_spark=self.bining(sqlContext,df_item_city_score,"item_city_score",percent_list)
+        # dfItemCityScore_spark.show()
+
+
+
 
         df_bin=df.join(dfDeviceCount_spark,'device','left') \
                     .join(dfAuthoridCount_spark,'author_id','left') \
@@ -290,9 +270,18 @@ class SparkFEProcess:
         # print(df_train_bin.dtypes)
         #根据train_count拆分训练集和测试集
 
-        df_bin=df_bin.repartition(1).withColumn("id", monotonically_increasing_id())
-        df_train_bin=df_bin.filter(df_bin['id']<train_count).drop('id').repartition(300)
-        df_test_bin=df_bin.filter(df_bin['id']>=train_count).drop('id').repartition(300)
+        #选出某些列为-1的值
+        df_train_bin=df_bin.filter(df_bin['like']!=-1).filter(df_bin['finish']!=-1)
+        print("训练集的数量")
+        print(df_train_bin.count())
+
+        df_test_bin=df_bin.filter(df_bin['like']==-1).filter(df_bin['finish']==-1)
+        print("测试集的数量")
+        print(df_test_bin.count())
+
+        # df_bin=df_bin.repartition(1).withColumn("id", monotonically_increasing_id())
+        # df_train_bin=df_bin.filter(df_bin['id']<train_count).drop('id').repartition(300)
+        # df_test_bin=df_bin.filter(df_bin['id']>=train_count).drop('id').repartition(300)
 
         #对测试集进行分箱处理
         #item_id  item_hour 不需要进行join  根据自身运算得到即可
@@ -330,7 +319,10 @@ class SparkFEProcess:
         del dfItemCityScore_spark
         gc.collect()
         '''
-
+        print("查看数据预处理后，like和finish有什么变化")
+        df_train_bin.agg( fn.countDistinct('finish').alias('finish_distinct'), \
+                          fn.countDistinct('like').alias('like_distinct')
+                          ).show()
 
 
         print('-------5.保存数据预处理结果-------')
