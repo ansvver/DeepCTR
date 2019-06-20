@@ -26,7 +26,7 @@ class SparkFEProcess:
 
         self.parser = self.init_config()
 
-        sparkConf = SparkConf().setAppName("feature engineering on spark") \
+        sparkConf = SparkConf().setAppName("feature engineering on spark of face") \
             .set("spark.ui.showConsoleProgress", "false")
         self.sc = SparkContext(conf=sparkConf)
         self.sc.broadcast(self.parser)
@@ -38,6 +38,7 @@ class SparkFEProcess:
     #     parser = configparser.ConfigParser()
     #     parser.read(config_file)
     #     return  parser
+
     def init_config(self):
         current_path = os.path.dirname(os.path.realpath(__file__))
         workspace_path = current_path.split('featureEngineering')[0]
@@ -94,85 +95,78 @@ class SparkFEProcess:
             ('relative_position',typ.ArrayType(typ.FloatType()))]
         Schema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
         df = sqlContext.createDataFrame(rawRdd_face2,Schema)
-        # df.show()
-        # df.printSchema()
 
         attrs = self.sc.parallelize(["relative_position_" + str(i) for i in range(4)]).zipWithIndex().collect()
         print("列名：", attrs)
         for name, index in attrs:
             df = df.withColumn(name, df['relative_position'].getItem(index))
         #删除 relative_position
-        df =df.drop('relative_position')
-        '''
-        print('查看各列的数据分布情况,最大值、最小值、是否存在0值')
-        df.describe().show()
-
-        print('beauty列中为0的行数')
-        print(df.filter(df['beauty']==0).count())
-        print('relative_position_0列中为0的行数')
-        print(df.filter(df['relative_position_0']==0).count())
-        print('relative_position_1列中为0的行数')
-        print(df.filter(df['relative_position_1']==0).count())
-        print('relative_position_2列中为0的行数')
-        print(df.filter(df['relative_position_2']==0).count())
-        print('relative_position_3列中为0的行数')
-        print(df.filter(df['relative_position_3']==0).count())
-
-        #空值是一定要填充的，但是填充-1是否可以？
-        print('检查beauty是否存在空值')
-        df1 = df.filter(psf.isnull("beauty"))  # 把a列里面数据为null的筛选出来（代表python的None类型）
-        df1.show(5)
-
-        print('检查relative_position_0是否存在空值,与relative_position_1，2,3等同，查看其中一列即可，要么同时存在，要么同时不存在')
-        df3 = df.filter(psf.isnull("relative_position_0"))  # 把a列里面数据为null的筛选出来（代表python的None类型）
-        df3.show(5)
+        df_face =df.drop('relative_position')
+        del df
+        gc.collect()
 
 
-        print('查看每一列的缺失比例')  #这里的话face_attrs各属性的缺失比例是一样的
-        df.agg(*[(1-(psf.count(c) /psf.count('*'))).alias(c+'_missing') for c in df.columns]).show()
+        # print('-------保存df_face数据-------')
+        # file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'face_feature'
+        # os.system("hadoop fs -rm -r {}".format(file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
+        # df_face.rdd.map(tuple).saveAsPickleFile(file_path)
+        # print('数据保存结束')
 
-        #查看每行的缺失值
-        print('查看每行记录的缺失值')
-        print(df.rdd.map(lambda row:(row['item_id'],sum([c==None for c in row]))).toDF('item_id','sum_none').filter('sum_none'>0).count())
-        '''
+        print('start to read act data  only for uid and item_id :')
+        rawRdd_train = self.read_rdd('final_track2_train.txt').map(lambda line : line.split('\t'))
+        rawRdd_test = self.read_rdd('final_track2_test_no_anwser.txt').map(lambda line : line.split('\t'))
+        actionLogRdd_train = rawRdd_train.map(
+            lambda x :(int(x[0]), int(x[2])))
+        # total = actionLogRdd_train.count()
+        # print('total: ' + str(total))
+        actionLogRdd_test = rawRdd_test.map(
+            lambda x :(int(x[0]), int(x[2])))
 
-        '''
-        #缺失值在这里不做处理，等后面将三表关联后再填充均值
+        sqlContext = SQLContext(self.sc)
+        labels=[('uid',typ.IntegerType()),
+            ('item_id',typ.IntegerType())
+            ]
 
-        # 类别变量缺失值填充为-1,连续变量缺失值填充为均值
-        print('输出各均值')
-        mean_val = df.select(psf.mean(df['beauty'])).collect()
-        mean_beauty = mean_val[0][0] # to show the number
-        print(mean_beauty)
-        mean_val = df.select(psf.mean(df['relative_position_0'])).collect()
-        mean_relative_position0 = mean_val[0][0] # to show the number
-        print(mean_relative_position0)
-        mean_val = df.select(psf.mean(df['relative_position_1'])).collect()
-        mean_relative_position1 = mean_val[0][0] # to show the number
-        print(mean_relative_position1)
-        mean_val = df.select(psf.mean(df['relative_position_2'])).collect()
-        mean_relative_position2 = mean_val[0][0] # to show the number
-        print(mean_relative_position2)
-        mean_val = df.select(psf.mean(df['relative_position_3'])).collect()
-        mean_relative_position3 = mean_val[0][0] # to show the number
-        print(mean_relative_position3)
+        actionLogSchema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
 
-        df=df.na.fill({'gender': -1, 'beauty': mean_beauty,'relative_position_0': mean_relative_position0, \
-                       'relative_position_1': mean_relative_position1,'relative_position_2': mean_relative_position2,\
-                       'relative_position_3': mean_relative_position3})
+        dfactionLog_train = sqlContext.createDataFrame(actionLogRdd_train, actionLogSchema)
+        dfactionLog_test = sqlContext.createDataFrame(actionLogRdd_test, actionLogSchema)
 
-        print('填充缺失以后')
-        df.show(2,truncate=False)
-        # print(df.columns)
-        '''
+        #根据item_id进行关联
+        df_face=df_face.select(["item_id","gender","beauty"])
+        df_uid_face_test=dfactionLog_test.select(["uid","item_id"]).join(df_face,'item_id','left').drop("item_id")
+        df_uid_face_train=dfactionLog_train.select(["uid","item_id"]).join(df_face,'item_id','left').drop("item_id")
+        del dfactionLog_test
+        del dfactionLog_train
+        gc.collect()
+
+        #进行处理
+        gdf=df_uid_face_train.groupby("uid")
+        df1=gdf.agg(fn.max("beauty").alias("uid_max_beauty"),fn.avg("beauty").alias("uid_avg_beauty"),(fn.sum("gender")/fn.count("gender")).alias("uid_male_ratio"))
+        df1.show(1,truncate=False)
+        df_uid_face_train=df_uid_face_train.join(df1,'uid','left').drop("gender").drop("beauty")
+        df_uid_face_test=df_uid_face_test.join(df1,'uid','left').drop("gender").drop("beauty")
+
+        print("理论上应该只有uid，uid_max_beauty,uid_avg_beauty,uid_male_ratio")
+        df_uid_face_train.printSchema()
+        df_uid_face_test.printSchema()
 
 
-        print('-------5.保存数据预处理结果-------')
-        file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'face_feature'
+
+        print('-------保存df_uid_face数据-------')
+        file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'df_uid_face_train'
         os.system("hadoop fs -rm -r {}".format(file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
-        df.rdd.map(tuple).saveAsPickleFile(file_path)
+        df_uid_face_train.rdd.map(tuple).saveAsPickleFile(file_path)
 
+        file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'df_uid_face_test'
+        os.system("hadoop fs -rm -r {}".format(file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
+        df_uid_face_test.rdd.map(tuple).saveAsPickleFile(file_path)
         print('数据保存结束')
+
+
+
+
+
 
 
 

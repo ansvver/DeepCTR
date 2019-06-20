@@ -60,156 +60,31 @@ class SparkFEProcess:
         except Exception as e:
             print(e)
 
-    def data_describe(self):
-        sqlContext = SQLContext(self.sc)
-        rootPath=self.parser.get("hdfs_path", "hdfs_data_path")
-        print('start to read actLog_test_bin')
-        test_file_path = rootPath + 'actLog_test_bin'
-        actLog_test_rdd = self.sc.pickleFile(test_file_path)
-        # print(actLog_test_rdd.take(5))
-        #2108547, 3909, 0, -1, -1, 9, '1', 6, 0, 4, 5, 0, 3, 2)
-        labels=[
-                ('item_id',typ.IntegerType()),
-                ('uid',typ.IntegerType()),
-                ('channel',typ.IntegerType()),
-                ('finish',typ.IntegerType()),
-                ('like',typ.IntegerType()),
-                ('duration_time',typ.IntegerType()),
-                ('item_pub_hour',typ.IntegerType()),
-                ('device_Cnt_bin',typ.IntegerType()),
-                ('authorid_Cnt_bin',typ.IntegerType()),
-                ('musicid_Cnt_bin',typ.IntegerType()),
-                ('uid_playCnt_bin',typ.IntegerType()),
-                ('itemid_playCnt_bin',typ.IntegerType()),
-                ('user_city_score_bin',typ.IntegerType()),
-                ('item_city_score_bin',typ.IntegerType())
-            ]
-        actionLogSchema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
-
-        df_actLog_test = sqlContext.createDataFrame(actLog_test_rdd,actionLogSchema)
-        # df_actLog_test.show(truncate=False)
-        # df_actLog_test.printSchema()
-
-        print('start to read actLog_train_bin')
-        train_file_path = rootPath + 'actLog_train_bin'
-        actLog_train_rdd = self.sc.pickleFile(train_file_path)
-        # print(actLog_train_rdd.take(5))
-        df_actLog_train = sqlContext.createDataFrame(actLog_train_rdd,actionLogSchema)
-        # df_actLog_train.show(truncate=False)
-        # df_actLog_train.printSchema()
-
-        print('start to read nlp_topic_feature2')
-        nlp_file_path = rootPath + 'nlp_topic_feature2'
-        nlp_topic_rdd = self.sc.pickleFile(nlp_file_path)
-        #'item_id', 'title_topic'
-        # df_nlp_topic=nlp_topic_rdd.toDF(['item_id','topic0','topic1','topic2','topic3','topic4','topic5','topic6','topic7','topic8','topic9',\
-        #                                  'topic10','topic11','topic12','topic13','topic14','topic15','topic16','topic17','topic18','topic19',\
-        #                                  'topic20','topic21','topic22','topic23','topic24','topic25','topic26','topic27','topic28','topic29',\
-        #                                  'topic30','topic31','topic32','topic33','topic34','topic35','topic36','topic37','topic38','topic39',\
-        #                                  'topic40','topic41','topic42','topic43','topic44','topic45','topic46','topic47','topic48','topic49'])
-        df_nlp_topic=nlp_topic_rdd.toDF(['item_id','title_topic'])
-        df_nlp_topic.show(2)
-        # df_nlp_topic.printSchema()
-
-
-        print('start to read face_feature')
-        face_file_path = rootPath + 'face_feature'
-        face_rdd = self.sc.pickleFile(face_file_path)
-        # print(face_rdd.take(5))
-        # item_id': 813408, 'gender': None, 'beauty','relative_position_0', 0), ('relative_position_1', 1), ('relative_position_2', 2), ('relative_position_3', 3
-        labels=[
-                ('item_id',typ.IntegerType()),
-                ('gender',typ.IntegerType()),
-                ('beauty',typ.DoubleType()),
-                ('relative_position_0',typ.DoubleType()),
-                ('relative_position_1',typ.DoubleType()),
-                ('relative_position_2',typ.DoubleType()),
-                ('relative_position_3',typ.DoubleType())
-            ]
-        faceSchema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
-        df_face = sqlContext.createDataFrame(face_rdd,faceSchema)
-        # df_face.show()
-        # df_face.printSchema()
-
-        #三表进行关联
-        df_test=df_actLog_test.join(df_nlp_topic,'item_id','left')\
-                      .join(df_face,'item_id','left')
-        df_train=df_actLog_train.join(df_nlp_topic,'item_id','left')\
-                      .join(df_face,'item_id','left')
-
-
-        print('查看训练集中每一列的缺失比例')
-        # df_train.agg(*[(1-(fn.count(c) /fn.count('*'))).alias(c+'_missing') for c in df_train.columns]).show()
-        print('查看测试集中每一列的缺失比例')
-        # df_test.agg(*[(1-(fn.count(c) /fn.count('*'))).alias(c+'_missing') for c in df_test.columns]).show()
-
-
-        #三表关联后，有些item_id是没有title的，导致title部分数据可能存在nan值，这里要进行缺失值填充
-
-        #类别变量填充-1，连续变量用均值填充
-        #对'title_topic'这一列填充-1即可
-        df_train=df_train.na.fill({'title_topic': -1})
-        df_test=df_test.na.fill({'title_topic': -1})
-
-
-        #对连续变量填充缺失值
-        print('输出各均值')
-        df=df_train.union(df_test)
-        mean_val = df.select(fn.mean(df['beauty'])).collect()
-        mean_beauty = mean_val[0][0] # to show the number
-        print(mean_beauty)
-        mean_val = df.select(fn.mean(df['relative_position_0'])).collect()
-        mean_relative_position0 = mean_val[0][0] # to show the number
-        print(mean_relative_position0)
-        mean_val = df.select(fn.mean(df['relative_position_1'])).collect()
-        mean_relative_position1 = mean_val[0][0] # to show the number
-        print(mean_relative_position1)
-        mean_val = df.select(fn.mean(df['relative_position_2'])).collect()
-        mean_relative_position2 = mean_val[0][0] # to show the number
-        print(mean_relative_position2)
-        mean_val = df.select(fn.mean(df['relative_position_3'])).collect()
-        mean_relative_position3 = mean_val[0][0] # to show the number
-        print(mean_relative_position3)
-
-        del df
-        gc.collect()
-
-        df_train=df_train.na.fill({'gender': -1, 'beauty': mean_beauty,'relative_position_0': mean_relative_position0, \
-                       'relative_position_1': mean_relative_position1,'relative_position_2': mean_relative_position2,\
-                       'relative_position_3': mean_relative_position3})
-        df_test=df_test.na.fill({'gender': -1, 'beauty': mean_beauty,'relative_position_0': mean_relative_position0, \
-                       'relative_position_1': mean_relative_position1,'relative_position_2': mean_relative_position2,\
-                       'relative_position_3': mean_relative_position3})
-
-        print('填充缺失以后')
-        print('查看训练集中每一列的缺失比例')
-        # df_train.agg(*[(1-(fn.count(c) /fn.count('*'))).alias(c+'_missing') for c in df_train.columns]).show()
-        print('查看测试集中每一列的缺失比例')
-        # df_test.agg(*[(1-(fn.count(c) /fn.count('*'))).alias(c+'_missing') for c in df_test.columns]).show()
-
-
-        localPath='/data/code/DeepCTR/data/dataForSkearn/'
-        #可能存在的问题，内存溢出
-        # df_train.toPandas().to_csv(localPath+"train.csv",index=False)
-        # df_test.toPandas().to_csv(localPath+"test.csv",index=False)
-
-
-        return df_train,df_test
-
-
-
-
     def build_data(self):
         sqlContext = SQLContext(self.sc)
         rootPath=self.parser.get("hdfs_path", "hdfs_data_path")
-        print('start to read df_test')
-        test_file_path = rootPath + 'df_test'
+        print('start to read concate data of test')
+        test_file_path = rootPath + 'df_concate_test'
         actLog_test_rdd = self.sc.pickleFile(test_file_path)
-
-
-        labels=[
+        #修改labels，根据前一个文件的printSchema信息
+        labels=[('uid',typ.IntegerType()),
                 ('item_id',typ.IntegerType()),
-                ('uid',typ.IntegerType()),
+                ("author_id_item_city_music_id_item_pub_hour",typ.StringType()),
+                ("uid_user_city_channel_device",typ.StringType()),
+                ("author_id_item_pub_hour",typ.StringType()),
+                ("author_id_music_id",typ.StringType()),
+                ("author_id_item_city",typ.StringType()),
+                ("author_id_user_city",typ.StringType()),
+                ("author_id_channel",typ.StringType()),
+                ("uid_item_pub_hour",typ.StringType()),
+                ("uid_device",typ.StringType()),
+                ("uid_music_id",typ.StringType()),
+                ("uid_channel",typ.StringType()),
+                ("uid_item_city",typ.StringType()),
+                ("uid_author_id",typ.StringType()),
+                ("uid_user_city",typ.StringType()),
+                ("uid_item_id",typ.StringType()),
+
                 ('channel',typ.IntegerType()),
                 ('finish',typ.IntegerType()),
                 ('like',typ.IntegerType()),
@@ -233,20 +108,17 @@ class SparkFEProcess:
         actionLogSchema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
         df_test = sqlContext.createDataFrame(actLog_test_rdd,actionLogSchema)
 
-        print('start to read actLog_train_bin')
-        train_file_path = rootPath + 'df_train'
+        print('start to read concate data of train')
+        train_file_path = rootPath + 'df_concate_train'
         actLog_train_rdd = self.sc.pickleFile(train_file_path)
         df_train = sqlContext.createDataFrame(actLog_train_rdd,actionLogSchema)
-
-        df_train.show(5,truncate=False)
-
 
         df_train_count=df_train.count()
         print(df_train_count)
         print('df_train_count:19622340')     #全部记录数：22384139
         print('df_test_count:2761799')
 
-        localPath='/data/code/DeepCTR/data/dataForDeepfmTest611/'
+        localPath='/data/code/DeepCTR/data/dataForDeepfmTest618/'
         train_label = df_train['finish','like']
         test_label = df_test['finish','like']
         print('保存test_label')
@@ -257,14 +129,30 @@ class SparkFEProcess:
         # df.cache()  #不能用cache(),本身内存不够，再将df保存在内存中，会导致内存溢出
         feat_dict = {}
         cnt = 1
-        #把duration_time列转化为VectorUDT
-        #df=VectorAssembler(inputCols=['duration_time',],outputCol='duration_time_feature').transform(df)
-        # df.select('duration_time_feature').show(5)
+        #需要处理的特征
+        #类别型特征如下：
+        ca_col = [ 'channel','time_day','item_pub_month','item_pub_day','item_pub_hour','item_pub_minute',\
+                'uid_count_bin','user_city_count_bin','item_id_count_bin','author_id_count_bin','item_city_count_bin',\
+                'music_id_count_bin',  'device_count_bin',  'duration_time_count_bin',   'uid_item_id_count_bin',\
+                'uid_author_id_count_bin','uid_item_city_count_bin',  'uid_channel_count_bin',     'uid_music_id_count_bin',\
+                'uid_device_count_bin',   'uid_item_pub_hour_count',  'author_id_channel_count_bin', 'author_id_user_city_count_bin',\
+                'author_id_item_city_count_bin','author_id_music_id_count_bin','author_id_item_pub_hour_count_bin',\
+                'uid_user_city_channel_device_count_bin','author_id_item_city_music_id_item_pub_hour_count_bin',\
 
-        ca_col = [ 'channel','item_pub_hour','device_Cnt_bin','authorid_Cnt_bin','musicid_Cnt_bin', \
-                  'uid_playCnt_bin','itemid_playCnt_bin','user_city_score_bin','item_city_score_bin' ,'title_topic','gender']
-        co_col=['duration_time','relative_position_0','relative_position_1','relative_position_2','relative_position_3',\
-                     'beauty',]   #这部分是连续变量，缺失部分已经用均值填充过了，同时其最大最小值都在0-1之间，因此不需要再做额外的处理
+                'title_words_unique','title_length', 'title_topic',\
+                'gender']
+        #连续型特征如下：
+        co_col=['uid_count_ratio','user_city_count_ratio','item_id_count_ratio','author_id_count_ratio','item_city_count_ratio',\
+                'music_id_count_ratio','device_count_ratio','duration_time_count_ratio','uid_item_id_count_ratio',\
+                'uid_author_id_count_ratio','uid_item_city_count_ratio','uid_channel_count_ratio','uid_music_id_count_ratio',\
+                'uid_device_count_ratio','uid_item_pub_hour_count_ratio','author_id_channel_count_ratio','author_id_user_city_count_ratio',\
+                'author_id_item_city_count_ratio','author_id_music_id_count_ratio','author_id_item_pub_hour_count_ratio',\
+                'uid_user_city_channel_device_count_ratio','author_id_item_city_music_id_item_pub_hour_count_ratio',\
+
+                'beauty', 'relative_position_0','relative_position_1','relative_position_2','relative_position_3',\
+                'uid_max_beauty','uid_avg_beauty','uid_male_ratio']
+
+                #这部分是连续变量，缺失部分已经用均值填充过了，同时其最大最小值都在0-1之间，因此不需要再做额外的处理
 
         #不参与训练的列 ：item_id\uid
         #对连续变量不做处理，因为duration_time的值范围已经是[0,300]了
@@ -305,62 +193,32 @@ class SparkFEProcess:
                 feature_value_train=feature_value_train.withColumn(i, fn.lit(1))
 
 
-        #方案二
-        idx = 0
-        def add_index(df):
-            print(df.count())
-            index_list = [x for x in range(1, df.count()+1)]  # 构造一个列表存储索引值，用生成器会出错
-            # 定义一个函数
-            def set_index(x):
-                global idx    # 将idx设置为全局变量
-                if x is not None:
-                    idx += 1
-                    return index_list[idx-1]
-            index = udf(set_index, typ.IntegerType())    # udf的注册，这里需要定义其返回值类型
-            df1=df.select(fn.col("*"), index("channel").alias("id"))  # udf的注册的使用，alias方法用于修改列名,报错TypeError: 'str' object is not callable
-            #df1.show()
-            return df1
-
-        feature_index_train=add_index(feature_index_train)
-        feature_value_train=add_index(feature_value_train)
-        print("观察add_index")
-        feature_index_train.show(5,truncate=False)
-        feature_value_train.show(5,truncate=False)
-        #由于feature_index和feature_value的字段名都是一样的，所以需要对feature_value的字段名修改一下，以示区别
-        train_label=add_index(train_label)
-
-        df_concate=feature_index_train.join(feature_value_train,'id','left') \
-                    .join(train_label,'id','left')
-        print("各字段的区别")
-        df_concate.show(5,truncate=False)
-
+        feature_index_train=feature_index_train.coalesce(1).withColumn("id", monotonically_increasing_id())
+        feature_value_train=feature_value_train.coalesce(1).withColumn("id", monotonically_increasing_id())
+        train_label = train_label.coalesce(1).withColumn("id", monotonically_increasing_id())
 
         print('-------.开始保存训练数据-------')
-
-        #将训练集划分成10份，
-        segList= [i for i in range(0,df_train_count+1,df_train_count//10)]
+        #将训练集划分成20份，
+        segList= [i for i in range(0,df_train_count+1,df_train_count//20)]
         # print('train存储方案一：toPandas()后保存到本地')
         for i in range(len(segList)):
-            if i <=9:
-                df_concate_i=df_concate.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
-                df_concate_i.toPandas().to_csv(localPath+"df_concate_"+str(i)+".csv",index=False)   #17+17+2
-                # train_feature_index_i=feature_index_train.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
-                # train_feature_value_i=feature_value_train.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
-                # train_label_i=train_label.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
-                #
-                # train_feature_index_i.toPandas().to_csv(localPath+"train_feature_index_"+str(i)+".csv",index=False)
-                # train_feature_value_i.toPandas().to_csv(localPath+"train_feature_value_"+str(i)+".csv",index=False)
-                # train_label_i.toPandas().to_csv(localPath+"train_label_"+str(i)+".csv",index=False)
-        print("训练数据保存结束")
+            if i <=19:
+                # print(i)
+                # print(segList[i],segList[i+1])
+                train_feature_index_i=feature_index_train.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
+                train_feature_value_i=feature_value_train.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
+                train_label_i=train_label.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
+
+                train_feature_index_i.toPandas().to_csv(localPath+"train_feature_index_"+str(i)+".csv",index=False)
+                train_feature_value_i.toPandas().to_csv(localPath+"train_feature_value_"+str(i)+".csv",index=False)
+                train_label_i.toPandas().to_csv(localPath+"train_label_"+str(i)+".csv",index=False)
+
 
 
 
         print("开始处理测试数据")
         feature_value_test=df.select(co_col+ca_col)
-        #创建一个与feature_value相同的dataFrame
         feature_index_test = feature_value_test
-
-        #修改dataFrame中列的值,把下面部分的功能转化成spark中的操作
         for i in feature_index_test.columns:
             # print(i)
             # print(feat_dict[i])  #这是一个dict
@@ -379,35 +237,8 @@ class SparkFEProcess:
         feature_index_test.toPandas().to_csv(localPath+"test_feature_index.csv",index=False)
         feature_value_test.toPandas().to_csv(localPath+"test_feature_value.csv",index=False)
 
-        #划分训练集和测试集，这里已经导致无法正确划分训练集和测试集了
-        #？？？？？？如何区分训练集和测试集？？？？？？？？
-        #方案：在repartition(1)之前就划分好训练集和测试集，再repartition(1)---yes
-        #feature_index有很多分区
-        ''''
-        print("方案一")
-        print("取前100条数据观察")
-        print("index和value是一一对应的")
 
-        feature_index_train.limit(20).show(100)
-        feature_value_train.limit(20).show(100)
-        print("index和value还是一一对应的吗？")
-        feature_index_train.coalesce(1).limit(20).show(100)
-        feature_value_train.coalesce(1).limit(20).show(100)
-
-        train_label.limit(100).show(100)
-        train_label.coalesce(1).limit(100).show(100)
-
-
-        print("添加自增id,pyspark中只能先coalesce(1)再使用自增id，否则就是每个分区有自己的自增id")
-        feature_index_train=feature_index_train.coalesce(1).withColumn("id", monotonically_increasing_id())
-        feature_value_train=feature_value_train.coalesce(1).withColumn("id", monotonically_increasing_id())
-        train_label = train_label.coalesce(1).withColumn("id", monotonically_increasing_id())
-        '''
-
-
-
-
-        print("一次性toPandas()到本地")
+        print("一次性toPandas()到本地")  #一次性保存，应该会有内存溢出的问题
         feature_index_train.toPandas().to_csv(localPath+"train_feature_index.csv",index=False)
         feature_value_train.toPandas().to_csv(localPath+"train_feature_value.csv",index=False)
         train_label.toPandas().to_csv(localPath+"train_label.csv",index=False)
@@ -418,5 +249,5 @@ if __name__ == "__main__":
     spark_job = SparkFEProcess()
 
     # df_train,df_test=spark_job.data_describe()
-
+    # idx = 0
     spark_job.build_data()    #完成读取数据

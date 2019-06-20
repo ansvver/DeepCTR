@@ -2,12 +2,24 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ffb1b2da-b167-4f2e-8f2b-761ce82dfa7f" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/featureEngineering/spark/build_data_forDeepfm_spark.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/featureEngineering/spark/concat_spark.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Tensorflow/deepfm/deepfm.py" afterPath="$PROJECT_DIR$/Tensorflow/deepfm/deepfm.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/encodings.xml" afterPath="$PROJECT_DIR$/.idea/encodings.xml" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/featureEngineering/spark/duration_time.png" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/Tensorflow/deepfm/deepfm_test.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/Tensorflow/deepfm/deepfm_test_modify.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/Tensorflow/deepfm/deepfm_train.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/Tensorflow/deepfm/deepfm_train_modify.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/featureEngineering/spark/explore_spark_step1_cross.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/featureEngineering/spark/explore_spark_step1_single.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/featureEngineering/spark/explore_spark_step2.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/featureEngineering/spark/local_face.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/featureEngineering/spark/local_nlp.py" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/featureEngineering/spark/readme.md" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Tensorflow/deepfm/README.md" afterPath="$PROJECT_DIR$/Tensorflow/deepfm/README.md" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/featureEngineering/spark/build_data_forDeepfm_spark.py" afterPath="$PROJECT_DIR$/featureEngineering/spark/build_data_forDeepfm_spark.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/featureEngineering/spark/concat_spark.py" afterPath="$PROJECT_DIR$/featureEngineering/spark/concat_spark.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/featureEngineering/spark/explore_face_spark.py" afterPath="$PROJECT_DIR$/featureEngineering/spark/explore_face_spark.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/featureEngineering/spark/explore_nlp_spark.py" afterPath="$PROJECT_DIR$/featureEngineering/spark/explore_nlp_spark.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/featureEngineering/spark/explore_spark.py" afterPath="$PROJECT_DIR$/featureEngineering/spark/explore_spark.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py" afterPath="$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/featureEngineering/spark/local.py" afterPath="$PROJECT_DIR$/featureEngineering/spark/local.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="DeepCTR.iws" />
@@ -31,46 +43,12 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="deepfm.py" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="deepfm.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Tensorflow/deepfm/deepfm.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.84678745" vertical-offset="5438" max-vertical-offset="10392">
-              <caret line="248" column="28" selection-start-line="248" selection-start-column="23" selection-end-line="248" selection-end-column="28" />
-              <folding>
-                <element signature="e#0#18#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="explore_nlp_spark.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/featureEngineering/spark/explore_nlp_spark.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="6528">
-              <caret line="12" column="0" selection-start-line="12" selection-start-column="0" selection-end-line="12" selection-end-column="37" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="5438" max-vertical-offset="10392">
+              <caret line="244" column="36" selection-start-line="244" selection-start-column="36" selection-end-line="244" selection-end-column="36" />
               <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="explore_face_spark.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/featureEngineering/spark/explore_face_spark.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="3665" max-vertical-offset="4272">
-              <caret line="169" column="8" selection-start-line="169" selection-start-column="8" selection-end-line="174" selection-end-column="23" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="build_data.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Tensorflow/build_data.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="652" max-vertical-offset="1488">
-              <caret line="47" column="13" selection-start-line="47" selection-start-column="13" selection-end-line="47" selection-end-column="13" />
-              <folding>
-                <element signature="e#0#13#0" expanded="true" />
-              </folding>
             </state>
           </provider>
         </entry>
@@ -78,18 +56,18 @@
       <file leaf-file-name="preprocess_spark.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="6950" max-vertical-offset="8208">
-              <caret line="144" column="0" selection-start-line="144" selection-start-column="0" selection-end-line="144" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="7776" max-vertical-offset="8352">
+              <caret line="324" column="0" selection-start-line="324" selection-start-column="0" selection-end-line="324" selection-end-column="0" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="explore_spark.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/featureEngineering/spark/explore_spark.py">
+      <file leaf-file-name="explore_spark_step2.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/featureEngineering/spark/explore_spark_step2.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="6545" max-vertical-offset="9216">
-              <caret line="294" column="69" selection-start-line="293" selection-start-column="8" selection-end-line="294" selection-end-column="69" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="4773" max-vertical-offset="5640">
+              <caret line="227" column="76" selection-start-line="227" selection-start-column="76" selection-end-line="227" selection-end-column="94" />
               <folding />
             </state>
           </provider>
@@ -98,23 +76,19 @@
       <file leaf-file-name="build_data_forDeepfm_spark.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/featureEngineering/spark/build_data_forDeepfm_spark.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="7358" max-vertical-offset="10248">
-              <caret line="320" column="11" selection-start-line="320" selection-start-column="11" selection-end-line="320" selection-end-column="11" />
-              <folding>
-                <element signature="e#25#68#0" expanded="true" />
-              </folding>
+            <state vertical-scroll-proportion="0.0" vertical-offset="1296" max-vertical-offset="6024">
+              <caret line="85" column="49" selection-start-line="85" selection-start-column="49" selection-end-line="85" selection-end-column="49" />
+              <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="concat_spark.py" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="concat_spark.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/featureEngineering/spark/concat_spark.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="4486" max-vertical-offset="5472">
-              <caret line="209" column="0" selection-start-line="209" selection-start-column="0" selection-end-line="209" selection-end-column="0" />
-              <folding>
-                <element signature="e#25#68#0" expanded="true" />
-              </folding>
+            <state vertical-scroll-proportion="0.7474049" vertical-offset="4896" max-vertical-offset="7512">
+              <caret line="237" column="17" selection-start-line="237" selection-start-column="17" selection-end-line="237" selection-end-column="17" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -122,9 +96,59 @@
       <file leaf-file-name="local.py" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/featureEngineering/spark/local.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.0" vertical-offset="480" max-vertical-offset="4104">
-              <caret line="50" column="11" selection-start-line="50" selection-start-column="11" selection-end-line="50" selection-end-column="11" />
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="3672">
+              <caret line="39" column="37" selection-start-line="39" selection-start-column="37" selection-end-line="39" selection-end-column="37" />
               <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="deepfm_spark.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Tensorflow/deepfm/deepfm_spark.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="7344">
+              <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="README.md" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Tensorflow/deepfm/README.md">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="-14.4" vertical-offset="0" max-vertical-offset="504">
+              <caret line="15" column="0" selection-start-line="15" selection-start-column="0" selection-end-line="15" selection-end-column="0" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="readme.md" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/featureEngineering/spark/readme.md">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="-17.36" vertical-offset="70" max-vertical-offset="936">
+              <caret line="21" column="39" selection-start-line="21" selection-start-column="39" selection-end-line="21" selection-end-column="39" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="functions.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="jar://D:/spark-2.3.2-bin-hadoop2.7/python/lib/pyspark.zip!/pyspark/sql/functions.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state vertical-scroll-proportion="0.0" vertical-offset="28224" max-vertical-offset="56160">
+              <caret line="1176" column="4" selection-start-line="1176" selection-start-column="4" selection-end-line="1176" selection-end-column="4" />
+              <folding>
+                <marker date="1537098622000" expanded="false" signature="72948:73015" placeholder="import ..." />
+                <marker date="1537098622000" expanded="false" signature="77023:77086" placeholder="import ..." />
+                <marker date="1537098622000" expanded="true" signature="77960:78023" placeholder="..." />
+                <marker date="1537098622000" expanded="true" signature="78094:78153" placeholder="..." />
+                <marker date="1537098622000" expanded="false" signature="80142:80266" placeholder="import ..." />
+                <marker date="1537098622000" expanded="true" signature="80434:80470" placeholder="..." />
+                <marker date="1537098622000" expanded="true" signature="80582:80610" placeholder="..." />
+                <marker date="1537098622000" expanded="true" signature="82324:82410" placeholder="..." />
+                <marker date="1537098622000" expanded="true" signature="83677:83856" placeholder="..." />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -159,12 +183,14 @@
         <option value="$PROJECT_DIR$/Tensorflow/deepfm/README.md" />
         <option value="$PROJECT_DIR$/featureEngineering/sklearn/data_split.py" />
         <option value="$PROJECT_DIR$/featureEngineering/spark/try.py" />
-        <option value="$PROJECT_DIR$/featureEngineering/spark/explore_spark.py" />
         <option value="$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py" />
-        <option value="$PROJECT_DIR$/featureEngineering/spark/concat_spark.py" />
-        <option value="$PROJECT_DIR$/featureEngineering/spark/local.py" />
         <option value="$PROJECT_DIR$/featureEngineering/spark/build_data_forDeepfm_spark.py" />
         <option value="$PROJECT_DIR$/Tensorflow/deepfm/deepfm.py" />
+        <option value="$PROJECT_DIR$/featureEngineering/spark/explore_spark.py" />
+        <option value="$PROJECT_DIR$/featureEngineering/spark/local.py" />
+        <option value="$PROJECT_DIR$/featureEngineering/spark/readme.md" />
+        <option value="$PROJECT_DIR$/featureEngineering/spark/explore_spark_step2.py" />
+        <option value="$PROJECT_DIR$/featureEngineering/spark/concat_spark.py" />
       </list>
     </option>
   </component>
@@ -198,6 +224,7 @@
       <sortByType />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <PATH>
@@ -400,64 +427,19 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="Pytorch" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="test" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="DeepCTR" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="DeepCTR" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="DeepCTR" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Pytorch" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="model" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="DeepCTR" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="DeepCTR" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="DeepCTR" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
               <option name="myItemId" value="MechineLearning" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
     <property name="settings.editor.selected.configurable" value="configurable.group.appearance" />
-    <property name="last_opened_file_path" value="D:/PythonProject/Bytedance_ICME_challenge-master" />
+    <property name="last_opened_file_path" value="D:/PythonProject/creditscorecard" />
     <property name="options.lastSelected" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
     <property name="options.splitter.main.proportions" value="0.3" />
     <property name="options.splitter.details.proportions" value="0.2" />
@@ -472,6 +454,10 @@
     </option>
   </component>
   <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\gitProject\DeepCTR\featureEngineering\spark" />
+      <recent name="D:\gitProject\DeepCTR\Tensorflow\deepfm" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="D:\gitProject\DeepCTR\featureEngineering\spark" />
       <recent name="D:\gitProject\DeepCTR\utils" />
@@ -749,15 +735,15 @@
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.2860286" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.2860286" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="SLIDING" type="SLIDING" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
-      <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
+      <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
     </layout>
     <layout-to-restore>
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
@@ -774,9 +760,9 @@
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="SLIDING" type="SLIDING" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.170706" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32972974" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
-      <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
+      <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32972974" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
     </layout-to-restore>
   </component>
   <component name="Vcs.Log.UiProperties">
@@ -801,13 +787,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://D:/Program Files/Python35/Lib/site-packages/tensorflowonspark/TFNode.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-0.04152249" vertical-offset="1272" max-vertical-offset="7296">
-          <caret line="62" column="4" selection-start-line="62" selection-start-column="4" selection-end-line="62" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://D:/Program Files/Python35/Lib/site-packages/tensorflow/python/client/session.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.33333334" vertical-offset="29875" max-vertical-offset="34224">
@@ -870,7 +849,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.46651787" vertical-offset="21278" max-vertical-offset="43488">
           <caret line="912" column="35" selection-start-line="912" selection-start-column="35" selection-end-line="912" selection-end-column="35" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -878,7 +856,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.3325893" vertical-offset="33278" max-vertical-offset="45672">
           <caret line="1438" column="8" selection-start-line="1438" selection-start-column="8" selection-end-line="1438" selection-end-column="8" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -900,7 +877,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.3325893" vertical-offset="45302" max-vertical-offset="49968">
           <caret line="1919" column="4" selection-start-line="1919" selection-start-column="4" selection-end-line="1919" selection-end-column="4" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -908,9 +884,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.33217993" vertical-offset="15288" max-vertical-offset="19536">
           <caret line="645" column="6" selection-start-line="645" selection-start-column="6" selection-end-line="645" selection-end-column="6" />
-          <folding>
-            <element signature="e#121#159#0" expanded="false" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -939,7 +912,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="-0.1539763" vertical-offset="16291" max-vertical-offset="23592">
           <caret line="675" column="8" selection-start-line="675" selection-start-column="8" selection-end-line="675" selection-end-column="8" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -947,7 +919,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.3325893" vertical-offset="974" max-vertical-offset="13296">
           <caret line="55" column="8" selection-start-line="55" selection-start-column="8" selection-end-line="55" selection-end-column="8" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -955,7 +926,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.3325893" vertical-offset="6974" max-vertical-offset="12912">
           <caret line="308" column="8" selection-start-line="308" selection-start-column="8" selection-end-line="308" selection-end-column="8" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -984,7 +954,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="4165" max-vertical-offset="18864">
           <caret line="202" column="4" selection-start-line="202" selection-start-column="4" selection-end-line="202" selection-end-column="4" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -992,7 +961,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.3325893" vertical-offset="63182" max-vertical-offset="73344">
           <caret line="2645" column="8" selection-start-line="2645" selection-start-column="8" selection-end-line="2645" selection-end-column="8" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1000,7 +968,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.37394246" vertical-offset="6451" max-vertical-offset="78864">
           <caret line="317" column="29" selection-start-line="317" selection-start-column="29" selection-end-line="317" selection-end-column="29" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1008,7 +975,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="216" max-vertical-offset="4608">
           <caret line="6" column="0" selection-start-line="6" selection-start-column="0" selection-end-line="6" selection-end-column="19" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1016,7 +982,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.627451" vertical-offset="31592" max-vertical-offset="140664">
           <caret line="1327" column="35" selection-start-line="1327" selection-start-column="35" selection-end-line="1327" selection-end-column="35" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1024,9 +989,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="480">
           <caret line="8" column="35" selection-start-line="8" selection-start-column="35" selection-end-line="8" selection-end-column="35" />
-          <folding>
-            <element signature="e#0#52#0" expanded="false" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -1034,33 +996,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="-10.48" vertical-offset="1034" max-vertical-offset="12432">
           <caret line="54" column="18" selection-start-line="54" selection-start-column="18" selection-end-line="54" selection-end-column="18" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="jar://D:/spark-2.3.2-bin-hadoop2.7/python/lib/pyspark.zip!/pyspark/sql/functions.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33387098" vertical-offset="10809" max-vertical-offset="56088">
-          <caret line="462" column="4" selection-start-line="462" selection-start-column="4" selection-end-line="462" selection-end-column="4" />
-          <folding>
-            <marker date="1537098622000" expanded="false" signature="-1:-1" placeholder="import ..." />
-            <marker date="1537098622000" expanded="false" signature="-1:-1" placeholder="import ..." />
-            <marker date="1537098622000" expanded="true" signature="-1:-1" placeholder="..." />
-            <marker date="1537098622000" expanded="true" signature="-1:-1" placeholder="..." />
-            <marker date="1537098622000" expanded="false" signature="-1:-1" placeholder="import ..." />
-            <marker date="1537098622000" expanded="true" signature="-1:-1" placeholder="..." />
-            <marker date="1537098622000" expanded="true" signature="-1:-1" placeholder="..." />
-            <marker date="1537098622000" expanded="true" signature="-1:-1" placeholder="..." />
-            <marker date="1537098622000" expanded="true" signature="-1:-1" placeholder="..." />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Tensorflow/deepfm/README.md">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="-6.72" vertical-offset="0" max-vertical-offset="312">
-          <caret line="7" column="11" selection-start-line="7" selection-start-column="11" selection-end-line="7" selection-end-column="11" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1068,9 +1003,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="3528">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#23#0" expanded="false" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -1078,7 +1010,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="4224" max-vertical-offset="13464">
           <caret line="114" column="11" selection-start-line="114" selection-start-column="11" selection-end-line="114" selection-end-column="11" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1086,7 +1017,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="720">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1094,7 +1024,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="148" max-vertical-offset="768">
           <caret line="9" column="31" selection-start-line="9" selection-start-column="31" selection-end-line="9" selection-end-column="31" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1102,9 +1031,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="196" max-vertical-offset="816">
           <caret line="12" column="18" selection-start-line="12" selection-start-column="18" selection-end-line="12" selection-end-column="18" />
-          <folding>
-            <element signature="e#0#18#0" expanded="false" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -1112,7 +1038,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="240">
           <caret line="9" column="13" selection-start-line="9" selection-start-column="13" selection-end-line="9" selection-end-column="13" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1120,15 +1045,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="2716" max-vertical-offset="4128">
           <caret line="157" column="1" selection-start-line="157" selection-start-column="1" selection-end-line="157" selection-end-column="1" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Tensorflow/deepfm/deepfm_spark.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="5356" max-vertical-offset="7344">
-          <caret line="277" column="38" selection-start-line="277" selection-start-column="38" selection-end-line="277" selection-end-column="38" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -1140,83 +1056,101 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/featureEngineering/spark/concat_spark.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="4486" max-vertical-offset="5472">
-          <caret line="209" column="0" selection-start-line="209" selection-start-column="0" selection-end-line="209" selection-end-column="0" />
-          <folding>
-            <element signature="e#25#68#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Tensorflow/build_data.py">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0" vertical-offset="652" max-vertical-offset="1488">
           <caret line="47" column="13" selection-start-line="47" selection-start-column="13" selection-end-line="47" selection-end-column="13" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Tensorflow/deepfm/deepfm.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="5438" max-vertical-offset="10392">
+          <caret line="244" column="36" selection-start-line="244" selection-start-column="36" selection-end-line="244" selection-end-column="36" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://D:/spark-2.3.2-bin-hadoop2.7/python/lib/pyspark.zip!/pyspark/sql/functions.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="28018" max-vertical-offset="56088">
+          <caret line="1176" column="4" selection-start-line="1176" selection-start-column="4" selection-end-line="1176" selection-end-column="4" />
           <folding>
-            <element signature="e#0#13#0" expanded="true" />
+            <marker date="1537098622000" expanded="false" signature="72948:73015" placeholder="import ..." />
+            <marker date="1537098622000" expanded="false" signature="77023:77086" placeholder="import ..." />
+            <marker date="1537098622000" expanded="true" signature="77960:78023" placeholder="..." />
+            <marker date="1537098622000" expanded="true" signature="78094:78153" placeholder="..." />
+            <marker date="1537098622000" expanded="false" signature="80142:80266" placeholder="import ..." />
+            <marker date="1537098622000" expanded="true" signature="80434:80470" placeholder="..." />
+            <marker date="1537098622000" expanded="true" signature="80582:80610" placeholder="..." />
+            <marker date="1537098622000" expanded="true" signature="82324:82410" placeholder="..." />
+            <marker date="1537098622000" expanded="true" signature="83677:83856" placeholder="..." />
           </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/featureEngineering/spark/explore_face_spark.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="3329" max-vertical-offset="4272">
-          <caret line="169" column="8" selection-start-line="169" selection-start-column="8" selection-end-line="174" selection-end-column="23" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/featureEngineering/spark/explore_nlp_spark.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="6528">
-          <caret line="12" column="0" selection-start-line="12" selection-start-column="0" selection-end-line="12" selection-end-column="37" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/featureEngineering/spark/explore_spark.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="6545" max-vertical-offset="9216">
-          <caret line="294" column="69" selection-start-line="293" selection-start-column="8" selection-end-line="294" selection-end-column="69" />
-          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/featureEngineering/spark/preprocess_spark.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="2990" max-vertical-offset="8208">
-          <caret line="144" column="0" selection-start-line="144" selection-start-column="0" selection-end-line="144" selection-end-column="0" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="2779" max-vertical-offset="8208">
+          <caret line="324" column="0" selection-start-line="324" selection-start-column="0" selection-end-line="324" selection-end-column="0" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/featureEngineering/spark/local.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="480" max-vertical-offset="4104">
-          <caret line="50" column="11" selection-start-line="50" selection-start-column="11" selection-end-line="50" selection-end-column="11" />
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="3672">
+          <caret line="39" column="37" selection-start-line="39" selection-start-column="37" selection-end-line="39" selection-end-column="37" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Tensorflow/deepfm/deepfm_spark.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="7344">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Tensorflow/deepfm/README.md">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-14.4" vertical-offset="0" max-vertical-offset="504">
+          <caret line="15" column="0" selection-start-line="15" selection-start-column="0" selection-end-line="15" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/featureEngineering/spark/readme.md">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="-17.36" vertical-offset="70" max-vertical-offset="936">
+          <caret line="21" column="39" selection-start-line="21" selection-start-column="39" selection-end-line="21" selection-end-column="39" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/featureEngineering/spark/build_data_forDeepfm_spark.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.0" vertical-offset="7358" max-vertical-offset="10248">
-          <caret line="320" column="11" selection-start-line="320" selection-start-column="11" selection-end-line="320" selection-end-column="11" />
-          <folding>
-            <element signature="e#25#68#0" expanded="true" />
-          </folding>
+        <state vertical-scroll-proportion="0.0" vertical-offset="1296" max-vertical-offset="6024">
+          <caret line="85" column="49" selection-start-line="85" selection-start-column="49" selection-end-line="85" selection-end-column="49" />
+          <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Tensorflow/deepfm/deepfm.py">
+    <entry file="file://$PROJECT_DIR$/featureEngineering/spark/explore_spark_step2.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.84678745" vertical-offset="5438" max-vertical-offset="10392">
-          <caret line="248" column="28" selection-start-line="248" selection-start-column="23" selection-end-line="248" selection-end-column="28" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-          </folding>
+        <state vertical-scroll-proportion="0.0" vertical-offset="4773" max-vertical-offset="5640">
+          <caret line="227" column="76" selection-start-line="227" selection-start-column="76" selection-end-line="227" selection-end-column="94" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/featureEngineering/spark/concat_spark.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.7474049" vertical-offset="4896" max-vertical-offset="7512">
+          <caret line="237" column="17" selection-start-line="237" selection-start-column="17" selection-end-line="237" selection-end-column="17" />
+          <folding />
         </state>
       </provider>
     </entry>

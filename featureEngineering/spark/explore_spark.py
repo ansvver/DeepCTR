@@ -13,7 +13,7 @@ from pyspark.sql.functions import udf
 from pyspark.sql.functions import monotonically_increasing_id
 import numpy as np
 import gc
-
+from collections import Counter
 # workspace_path='/data/code/DeepCTR/'
 # hdfs_data_path = '/user/hadoop/icmechallenge2019/track2/data/'
 
@@ -23,7 +23,7 @@ class SparkFEProcess:
 
         self.parser = self.init_config()
 
-        sparkConf = SparkConf().setAppName("feature engineering on spark") \
+        sparkConf = SparkConf().setAppName("feature engineering on spark of explore_spark") \
             .set("spark.ui.showConsoleProgress", "false")
         self.sc = SparkContext(conf=sparkConf)
         self.sc.broadcast(self.parser)
@@ -76,7 +76,6 @@ class SparkFEProcess:
             lambda x :(int(x[0]), int(x[1]), int(x[2]), int(x[3]), int(x[4]), int(x[5]),
                        int(x[6]), int(x[7]), int(x[8]), int(x[9]), int(x[10]), int(x[11])))
 
-
         #转化为dataframe
         sqlContext = SQLContext(self.sc)
         labels=[('uid',typ.IntegerType()),
@@ -99,21 +98,21 @@ class SparkFEProcess:
         dfactionLog_train=dfactionLog_train.filter(dfactionLog_train['duration_time']<=300)
         dfactionLog_test=dfactionLog_test.filter(dfactionLog_test['duration_time']<=300)
         #train和test合并，并且保存保存train的数量，以便拆分   union可能会改变frame中的顺序
-        df=dfactionLog_train.union(dfactionLog_test)
-        train_count=dfactionLog_train.count()
-        print("训练集的数量"+str(train_count))
-        test_count=dfactionLog_test.count()
-        print("训练集的数量"+str(test_count))
+        # df=dfactionLog_train.union(dfactionLog_test)
+        # train_count=dfactionLog_train.count()
+        # print("训练集的数量"+str(train_count))
+        # test_count=dfactionLog_test.count()
+        # print("测试集的数量"+str(test_count))
 
-        print('-------2.finish\like各特征下值的个数-------------')
-        df.agg( fn.countDistinct('finish').alias('finish_distinct'), \
-                fn.countDistinct('like').alias('like_distinct')
-                ).show()
-        print("各特征下的最大值,最小值")
-        df.describe().show()
+        # print('-------2.finish\like各特征下值的个数-------------')
+        # df.agg( fn.countDistinct('finish').alias('finish_distinct'), \
+        #         fn.countDistinct('like').alias('like_distinct')
+        #         ).show()
+        # print("各特征下的最大值,最小值")
+        # df.describe().show()
 
 
-        return df,train_count
+        return dfactionLog_train, dfactionLog_test
 
     def bining(self,sqlContext,df,col,percent_list):
         '''
@@ -126,8 +125,8 @@ class SparkFEProcess:
         bins=[]
         for percent in percent_list:
             bins.append(np.percentile(pandas_df.loc[:,col],percent))  #至少有20%的数据项小于或等于这个值
-        # print(col+'查看分箱')
-        # print(bins)
+        print(col+'查看分箱')
+        print(bins)
         pandas_df.loc[:,col]=np.digitize(pandas_df.loc[:,col],bins,right=True)
         # print(pandas_df)
 
@@ -135,7 +134,6 @@ class SparkFEProcess:
         pandas_df.rename(columns={col:col+'_bin'}, inplace = True)
         df_spark= sqlContext.createDataFrame(pandas_df)
         # df_spark.show()
-
         return  df_spark
 
 
@@ -160,33 +158,224 @@ class SparkFEProcess:
         return df
 
 
-    def data_explore(self,df,train_count):
+    def data_explore(self,df_train,df_test):
 
-
-        print('-------3.观察训练集和测试集的数据差异-------------')
         sqlContext = SQLContext(self.sc)
+        print("duration_time应该根据喜欢和不喜欢来分箱")
+        print("查看duration_time的分布")
+        print()
+        print("------------1、通过时间戳获取年月日时分，(没有工作日特征，月日交叉表示节日特征,年份转化有问题)-----------------")
+
 
         #作品发布时间-作品发布的最早时间,转化为day
-        time_min = df.select(fn.min(df['time'])).collect()
-        df=df.withColumn('time_day', ((df.time-fn.lit(time_min[0][0])) /fn.lit(3600 * 24)).cast(typ.IntegerType()))
-
+        time_min = df_train.select(fn.min(df_train['time'])).collect()
+        df_train=df_train.withColumn('time_day', ((df_train.time-fn.lit(time_min[0][0])) /fn.lit(3600 * 24)).cast(typ.IntegerType()))
+        # df_train=df_train.withColumn('time_strDate',fn.from_unixtime(df_train.time , "yyyy-MM-dd HH:mm:ss"))
         #将 unix 格式的时间戳转换为指定格式的日期,提取小时
-        df=df.withColumn('item_pub_hour',fn.from_unixtime(df.time , "h").cast(typ.IntegerType()))
+        df_train=df_train.withColumn('item_pub_month',fn.from_unixtime(df_train.time , "M").cast(typ.IntegerType()))
+        df_train=df_train.withColumn('item_pub_day',fn.from_unixtime(df_train.time , "d").cast(typ.IntegerType()))
+        df_train=df_train.withColumn('item_pub_hour',fn.from_unixtime(df_train.time , "k").cast(typ.IntegerType()))
+        df_train=df_train.withColumn('item_pub_minute',fn.from_unixtime(df_train.time , "m").cast(typ.IntegerType()))
+        print("查看month,day,hour,minute的提取是否正确")
+        df_train.show(truncate=False)
+        df_train=df_train.drop('time')
+        #对时间提取的这部分字段进行count后进行分箱并不明显，就直接当作类别变量处理就可以了，另外增加pos_neg_ratio特征
 
-        #df=df.drop('time')
 
-        #print('-------4.统计并汇总用户行为数据-------')
-        print("计算各特征的count，包括交叉特征")
+        df_test=df_test.withColumn('time_day', ((df_test.time-fn.lit(time_min[0][0])) /fn.lit(3600 * 24)).cast(typ.IntegerType()))
+        df_test=df_test.withColumn('item_pub_month',fn.from_unixtime(df_test.time , "M").cast(typ.IntegerType()))
+        df_test=df_test.withColumn('item_pub_day',fn.from_unixtime(df_test.time , "d").cast(typ.IntegerType()))
+        df_test=df_test.withColumn('item_pub_hour',fn.from_unixtime(df_test.time , "k").cast(typ.IntegerType()))
+        df_test=df_test.withColumn('item_pub_minute',fn.from_unixtime(df_test.time , "m").cast(typ.IntegerType()))
+        df_test=df_test.drop('time')
+
+        print('--------2、统计特征：count、ratio、nunique、ctr相关特征')
+        print("计算基础特征和交叉特征的count、类别偏好的ratio")
         count_feats_list = []
-        count_feats_list.append(['time_day'])
 
         print('single feature count')
-        count_feats_list.extend([[c] for c in df.columns if c not in ['time', 'channel', 'like', 'finish']])
+        count_feats_list.extend([[c] for c in df_train.columns if c not in ['time', 'channel', 'like', 'finish','dutration_time',"time_day","item_pub_month","item_pub_day","item_pub_hour","item_pub_minute"]])
         print(count_feats_list)
 
-        print()
+        print('cross count')
+        users = ['uid']
+        authors = ['item_id', 'user_city', 'author_id', 'item_city', 'channel', 'music_id', 'device','item_pub_hour']
+        count_feats_list.extend([[u_col, a_col] for u_col in users for a_col in authors])
+
+        users = ['author_id']
+        authors = ['channel', 'user_city', 'item_city', 'music_id',  'item_pub_hour']
+        count_feats_list.extend([[u_col, a_col] for u_col in users for a_col in authors])
+
+        count_feats_list.append(['uid', 'user_city', 'channel', 'device'])
+        count_feats_list.append(['author_id', 'item_city', 'music_id','item_pub_hour'])
+        print("计算count的字段有以下这些")
+        print(count_feats_list)
+
+        for i in range(len(count_feats_list)):
+           group_cols=count_feats_list[i]
+           new_feature = '_'.join(group_cols)
+           #判断是几维交叉特征，并进行拼接，再计算每个特征值的个数count,并完成映射
+           if len(group_cols)==1:
+              if new_feature in ["music_id"] :
+                  df1 = df_train.where(df_train[new_feature]!=-1).groupby(new_feature).count()\
+                          .withColumnRenamed('count',new_feature+'_count')
+              else:
+                  df1 = df_train.groupby(new_feature).count()\
+                          .withColumnRenamed('count',new_feature+'_count')
+              #类别偏好的ratio比例
+              count_min = df1.select(fn.min(df1[new_feature+'_count'])).collect()[0][0]
+              count_max = df1.select(fn.max(df1[new_feature+'_count'])).collect()[0][0]
+              # F.bround("Rank", scale=4)
+              df1=df1.withColumn(new_feature+'_count_ratio', fn.bround(((df1[new_feature+'_count']-fn.lit(count_min)) /((fn.lit(count_max)-fn.lit(count_min)).cast(typ.IntegerType()))),scale=3))
+              # print("查看df1_1")
+              # df1.show(5,truncate=False)
+              if new_feature=="device":   #[1.0, 16.0, 46.0, 102.0, 204.0, 410.0, 10389.0] 修改
+                 percent_list=[0,10,20,30,40,50,60,70,80,90,100]
+              elif new_feature=="author_id":  #[1.0, 2.0, 7.0, 32.0, 78.0, 276186.0]
+                  percent_list=[0,50,75,90,95,100]
+              elif new_feature=="music_id":   #[1.0, 3.0, 13.0, 73.0, 211.0, 193640.0]
+                 percent_list=[0,50,75,90,95,100]   #每个percent_list不相同
+              elif new_feature=="uid":       #分箱[1.0, 104.0, 329.0, 741.0, 1131.0, 10389.0]
+                  percent_list=[0,50,75,90,95,100]
+              elif new_feature=="item_id":   #[1.0, 1.0, 2.0, 7.0, 14.0, 6911.0]  分箱修改
+                  percent_list=[0,75,90,95,100]
+              elif new_feature=="user_city":  #[1.0, 21935.5, 54519.5, 110179.0, 146319.75, 3789087.0] 修改
+                  percent_list=[0,10,20,30,40,50,60,70,80,90,100]
+              elif new_feature=="item_city":  #[1.0, 14725.0, 48576.0, 122887.0, 206845.5, 744265.0]  修改
+                  percent_list=[0,10,20,30,40,50,60,70,80,90,100]
+              else:
+                  percent_list=[0,10,20,30,40,50,60,70,80,90,100]
+
+              df1=self.bining(sqlContext,df1,new_feature+'_count',percent_list)
+              # print(df1.show(5,truncate=False))
+              df_train=df_train.join(df1,new_feature,'left')
+              # print("train")
+              # df_train.show(5,truncate=False)   #ratio是一个连续变量，范围0-1
+              df_test=df_test.join(df1,new_feature,'left')
+              # print("test")
+              # df_test.show(5,truncate=False)   #ratio是一个连续变量，范围0-1
+              del df1
+              gc.collect()
+           print("输出所有一维特征处理后的结果")
+           df_train.show(1,truncate=False)
+           df_train.printSchema()
+           df_test.show(1,truncate=False)
+           df_train.printSchema()
+
+           if len(group_cols)==2:
+              print("开始处理2维交叉变量")
+              df_train=df_train.withColumn(new_feature, fn.concat_ws('_',df_train[group_cols[0]].cast(typ.StringType()),df_train[group_cols[1]].cast(typ.StringType()))
+                                                             )
+              df_test=df_test.withColumn(new_feature, fn.concat_ws('_',df_test[group_cols[0]].cast(typ.StringType()),df_test[group_cols[1]].cast(typ.StringType()))
+                                                             )
+              df2 = df_train.groupby(new_feature).count()\
+                     .withColumnRenamed('count',new_feature+'_count')
+              #类别偏好的ratio比例
+              count_min = df2.select(fn.min(df2[new_feature+'_count'])).collect()[0][0]
+              count_max = df2.select(fn.max(df2[new_feature+'_count'])).collect()[0][0]
+              # F.bround("Rank", scale=4)
+              df2=df2.withColumn(new_feature+'_count_ratio', fn.bround(((df2[new_feature+'_count']-fn.lit(count_min)) /((fn.lit(count_max)-fn.lit(count_min)).cast(typ.IntegerType()))),scale=3))
+              # print("查看df1_1")
+              # df2.show(5,truncate=False)
+              if new_feature=="uid_item_id":
+                 percent_list=[0,20,35,50,65,85,100]   #每个percent_list不相同
+              else:
+                 percent_list=[0,50,75,90,95,100]
+              # elif new_feature=="uid_user_city":
+              #     percent_list=[0,50,75,90,95,100]
+              # elif new_feature=="uid_author_id":
+              #    percent_list=[0,50,75,90,95,100]   #每个percent_list不相同
+              # elif new_feature=="uid_item_city":
+              #     percent_list=[0,50,75,90,95,100]
+              # elif new_feature=="uid_channel":
+              #     percent_list=[0,50,75,90,95,100]
+              # elif new_feature=="uid_music_id":
+              #     percent_list=[0,50,75,90,95,100]
+              # elif new_feature=="uid_device":
+              #     percent_list=[0,50,75,90,95,100]
+              # elif new_feature=="uid_time_pub_hour":
+              #     percent_list=[0,50,75,90,95,100]
+
+              # ['uid', 'item_id'], ['uid', 'user_city'], ['uid', 'author_id'], ['uid', 'item_city'], ['uid', 'channel'], ['uid', 'music_id'],
+              #  ['uid', 'device'], ['uid', 'time_pub_hour']
+              #['author_id', 'channel'], ['author_id', 'user_city'], ['author_id', 'item_city'], ['author_id', 'music_id'], ['author_id', 'time_pub_hour']
+
+              df2=self.bining(sqlContext,df2,new_feature+'_count',percent_list)
+              print("查看df2_2")
+              df2.show(5,truncate=False)
+              df_train=df_train.join(df2,new_feature,'left')
+              # print("train")
+              # df_train.show(5,truncate=False)   #ratio是一个连续变量，范围0-1
+              df_test=df_test.join(df2,new_feature,'left')
+              # print("test")
+              # df_test.show(5,truncate=False)
 
 
+           if len(group_cols)==4:
+              print("开始处理4维交叉变量")
+              df_train=df_train.withColumn(new_feature, fn.concat_ws('_',df_train[group_cols[0]].cast(typ.StringType()),df_train[group_cols[1]].cast(typ.StringType()),
+                                                             df_train[group_cols[2]].cast(typ.StringType()),df_train[group_cols[3]].cast(typ.StringType()))
+                                                           )
+              df_test=df_test.withColumn(new_feature, fn.concat_ws('_',df_test[group_cols[0]].cast(typ.StringType()),df_test[group_cols[1]].cast(typ.StringType()),
+                                                             df_test[group_cols[2]].cast(typ.StringType()),df_test[group_cols[3]].cast(typ.StringType()))
+                                                           )
+
+              df3 = df_train.groupby(new_feature).count()\
+                     .withColumnRenamed('count',new_feature+'_count')
+
+              #类别偏好的ratio比例
+              count_min = df3.select(fn.min(df3[new_feature+'_count'])).collect()[0][0]
+              count_max = df3.select(fn.max(df3[new_feature+'_count'])).collect()[0][0]
+              # F.bround("Rank", scale=4)
+              df3=df3.withColumn(new_feature+'_count_ratio', fn.bround(((df3[new_feature+'_count']-fn.lit(count_min)) /((fn.lit(count_max)-fn.lit(count_min)).cast(typ.IntegerType()))),scale=3))
+              # print("查看df3_1")
+              # df3.show(5,truncate=False)
+              percent_list=[0,50,75,90,95,100]
+              df3=self.bining(sqlContext,df3,new_feature+'_count',percent_list)
+              print("查看df3_2")
+              df3.show(5,truncate=False)
+              df_train=df_train.join(df3,new_feature,'left')
+              # print("train")
+              # df_train.show(5,truncate=False)
+              # ['uid', 'user_city', 'channel', 'device'], ['author_id', 'item_city', 'music_id', 'time_pub_hour']
+              df_test=df_test.join(df3,new_feature,'left')
+              # print("test")
+              # df_test.show(5,truncate=False)
+        # df.show(5,truncate=False)
+        print("删除没有必要的列")
+        unuse_col=['item_city','user_city','device','author_id','music_id',]  #'uid','item_id'这两列不能删除，后面提交结果的时候应该要用到
+        df_train=self.dropUnuseCols(df_train,unuse_col)
+        df_test=self.dropUnuseCols(df_test,unuse_col)
+
+        print("表中含有为null的字段，主要产生在leftjoin的时候")
+        print("这一步先不做，三表联合的时候会填充")
+        # df_train=df_train.na.fill(-1)
+        # df_test=df_test.na.fill(-1)
+
+        print("查看train的统计信息")
+        desc = df_train.describe()
+        desc.show()
+        print("查看test的统计信息")
+        desc = df_test.describe()
+        desc.show()
+
+
+        print('-------5.保存数据预处理结果-------')
+        test_file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'actLog_test_new'
+        os.system("hadoop fs -rm -r {}".format(test_file_path))
+        df_test.rdd.map(tuple).saveAsPickleFile(test_file_path)
+
+        del df_test
+        gc.collect()
+
+        train_file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'actLog_train_new'
+        os.system("hadoop fs -rm -r {}".format(train_file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
+        df_train.rdd.map(tuple).saveAsPickleFile(train_file_path)
+
+
+
+
+        '''
         #device出现的次数
         dfDeviceCount = df.groupby('device').count() \
              .withColumnRenamed("count", "device_Cnt")
@@ -279,51 +468,9 @@ class SparkFEProcess:
         print("测试集的数量")
         print(df_test_bin.count())
 
-        # df_bin=df_bin.repartition(1).withColumn("id", monotonically_increasing_id())
-        # df_train_bin=df_bin.filter(df_bin['id']<train_count).drop('id').repartition(300)
-        # df_test_bin=df_bin.filter(df_bin['id']>=train_count).drop('id').repartition(300)
-
         #对测试集进行分箱处理
         #item_id  item_hour 不需要进行join  根据自身运算得到即可
         #将 unix 格式的时间戳转换为指定格式的日期,提取小时
-        '''
-        df_test=df_test.withColumn('item_pub_hour', fn.from_unixtime(df_test.time , "h"))
-        #将string类转化为int类型
-        df_test=df_test.withColumn('item_pub_hour',df_test.item_pub_hour.cast(typ.IntegerType()))
-        df_test=df_test.drop('time')
-        df_test_bin=df_test.join(dfDeviceCount_spark,'device','left') \
-                    .join(dfAuthoridCount_spark,'author_id','left') \
-                    .join(dfMusicidCount_spark,'music_id','left') \
-                    .join(dfCntUserPlayVideo_spark,'uid','left') \
-                    .join(dfCntvidPlayVideo_spark,'item_id','left') \
-                    .join(dfUserCityScore_spark,'user_city','left') \
-                    .join(dfItemCityScore_spark,'item_city','left')
-
-        # .join(df_item_hour,'item_id','left') \
-        #删除没有必要的列
-        df_test_bin=self.dropUnuseCols(df_test_bin,unuse_col)
-        df_test_bin=df_test_bin.na.fill(-1)
-        df_test_bin.show(truncate=False)
-        # desc = df_train_bin.describe()
-        # desc.show()
-        # print('返回各列名和数据类型')
-        # print(df_train_bin.dtypes)
-
-        #清理内存
-        del dfDeviceCount_spark
-        del dfAuthoridCount_spark
-        del dfMusicidCount_spark
-        del dfCntUserPlayVideo_spark
-        del dfCntvidPlayVideo_spark
-        del dfUserCityScore_spark
-        del dfItemCityScore_spark
-        gc.collect()
-        '''
-        print("查看数据预处理后，like和finish有什么变化")
-        df_train_bin.agg( fn.countDistinct('finish').alias('finish_distinct'), \
-                          fn.countDistinct('like').alias('like_distinct')
-                          ).show()
-
 
         print('-------5.保存数据预处理结果-------')
         test_file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'actLog_test_bin'
@@ -337,54 +484,13 @@ class SparkFEProcess:
         os.system("hadoop fs -rm -r {}".format(train_file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
         df_train_bin.rdd.map(tuple).saveAsPickleFile(train_file_path)
 
-
-        #
-        print('数据保存结束')
-
-        #用以下方式读取
-        # rdd = self.sc.pickleFile(test_file_path)
-        # rdd.collect()
-        # new_df = sqlContext.createDataFrame(rdd, chema)
-        # new_df.show()
-
-
-        # return df_train_bin,df_test_bin
-
-        # return df_train_bin,df_test_bin
-
-        #保存dfAll,转化为rdd.collect(),一条条保存到txt文件，以\t分割
-        # 数据写到hdfs，而且以csv格式保存
-        # dfAll.write.mode("overwrite").options(header="true").csv("/home/ai/da/da_aipurchase_dailysale_for_ema_predict.csv")
-
-        #显示csv有问题
-        #显示csv有问题
-        # df_user_city_score.write.csv(path="/user/hadoop/icmechallenge2019/track2/data/user_city_score2.csv", header="true", mode="overwrite", sep="\t")
-        #显示save有问题
-        # df_user_city_score.write.format('csv').mode('overwrite').option("header", "true").save("/user/hadoop/icmechallenge2019/track2/data/user_city_score1.csv")
-
-        # ca_col_before = ['uid', 'user_city', 'item_id', 'author_id', 'item_city', 'channel',
-        #                'music_id', 'device',]
-        # co_col = ['duration_time']  # track2_time作品发布时间，作品时长
-        # #各变量与y的相关性
-        # all_col=ca_col_before+co_col
-        # for i in all_col :
-        #     for j in label:
-        #         print('{}和{}的相关性:'.format(i,j),df_train.corr(i,j))
-        #
-        #
-        # #预处理后输入模型的变量
-        # ca_col_after= ['uid_playCnt', 'user_city', 'itemid_playCnt', 'authorid_Cnt', 'item_city', 'channel',
-        #                'musicid_Cnt', 'device_Cnt', 'item_pub_hour',]
-        # all_col_after=ca_col_after+co_col
-        # for i in all_col_after :
-        #     for j in label:
-        #         print('{}和{}的相关性:'.format(i,j),dfAll.corr(i,j))
+        '''
 
 
 
 if __name__ == "__main__":
     spark_job = SparkFEProcess()
 
-    df,train_count=spark_job.data_describe()
+    df_train,df_test=spark_job.data_describe()
 
-    spark_job.data_explore(df,train_count)
+    spark_job.data_explore(df_train,df_test)
