@@ -7,6 +7,7 @@ import pyspark.sql.types as typ
 import os
 import gc
 import pyspark.sql.functions as fn
+from pyspark.sql.functions import udf
 # import pyspark.sql.functions  as psf
 from pyspark.sql import Row
 from pyspark.sql.functions import monotonically_increasing_id
@@ -63,37 +64,26 @@ class SparkFEProcess:
         sqlContext = SQLContext(self.sc)
         rootPath=self.parser.get("hdfs_path", "hdfs_data_path")
         print('start to read actLog_test_step2')
-        test_file_path = rootPath + 'actLog_test_step2'
+        test_file_path = rootPath + 'actLog_test_single_cross'
         actLog_test_rdd = self.sc.pickleFile(test_file_path)
         #labels需要修改
-        labels=[
-                ('author_id_item_city_music_id_item_pub_hour',typ.StringType()),
-                 ('uid_user_city_channel_device',typ.StringType()),   #改成uid_channel_device
-                 ('author_id_item_pub_hour',typ.StringType()),
-                 ('author_id_music_id',typ.StringType()),
-                 ('author_id_item_city',typ.StringType()),
-                 ('author_id_user_city',typ.StringType()),
-                 ('author_id_channel',typ.StringType()),
-                 ('uid_device',typ.StringType()),
-                 ('uid_music_id',typ.StringType()),
-                 ('uid_channel',typ.StringType()),
-                 ('uid_item_city',typ.StringType()),
-                 ('uid_author_id',typ.StringType()),
-                 ('uid_user_city',typ.StringType()),
-                 ('uid_item_id',typ.StringType()),
-                 ('duration_time',typ.IntegerType()),
+        labels=[  ('duration_time',typ.IntegerType()),
+                ('device',typ.IntegerType()),
+                ('music_id',typ.IntegerType()),
+                ('item_city',typ.IntegerType()),
+                ('author_id',typ.IntegerType()),
                 ('item_id',typ.IntegerType()),
+                ('user_city',typ.IntegerType()),
                 ('uid',typ.IntegerType()),
                 ('channel',typ.IntegerType()),
                 ('finish',typ.IntegerType()),
                 ('like',typ.IntegerType()),
-               ('time_day',typ.IntegerType()),
-               ('item_pub_month',typ.IntegerType()),
-               ('item_pub_day',typ.IntegerType()),
-               ('item_pub_hour',typ.IntegerType()),
-               ('item_pub_minute',typ.IntegerType()),
-               ('uid_count_bin',typ.IntegerType()),
-                ('uid_count_ratio',typ.DoubleType()),
+                ('time_day',typ.IntegerType()),
+                ('item_pub_month',typ.IntegerType()),
+                ('item_pub_day',typ.LongType()),
+                ('item_pub_hour',typ.IntegerType()),
+                ('item_pub_minute',typ.IntegerType()),
+                ('uid_count_bin',typ.IntegerType()),
                 ('user_city_count_bin',typ.IntegerType()),
                 ('user_city_count_ratio',typ.DoubleType()),
                 ('item_id_count_bin',typ.IntegerType()),
@@ -106,12 +96,6 @@ class SparkFEProcess:
                 ('music_id_count_ratio',typ.DoubleType()),
                 ('device_count_bin',typ.IntegerType()),
                 ('device_count_ratio',typ.DoubleType()),
-                ('duration_time_count_bin',typ.IntegerType()),
-                ('duration_time_count_ratio',typ.DoubleType()),
-                ('uid_item_id_count_bin',typ.IntegerType()),
-                ('uid_item_id_count_ratio',typ.DoubleType()),
-                ('uid_user_city_count_bin',typ.IntegerType()),  #这个字段不要
-                ('uid_user_city_count_ratio',typ.DoubleType()),  #这个字段不要
                 ('uid_author_id_count_bin',typ.IntegerType()),
                 ('uid_author_id_count_ratio',typ.DoubleType()),
                  ('uid_item_city_count_bin',typ.IntegerType()),
@@ -120,10 +104,8 @@ class SparkFEProcess:
                 ('uid_channel_count_ratio',typ.DoubleType()),
                 ('uid_music_id_count_bin',typ.IntegerType()),
                 ('uid_music_id_count_ratio',typ.DoubleType()),
-                 ('uid_device_count_bin',typ.IntegerType()),
+                ('uid_device_count_bin',typ.IntegerType()),
                 ('uid_device_count_ratio',typ.DoubleType()),
-                ('uid_item_pub_hour_count',typ.IntegerType()),
-                ('uid_item_pub_hour_count_ratio',typ.DoubleType()),
                 ('author_id_channel_count_bin',typ.IntegerType()),
                 ('author_id_channel_count_ratio',typ.DoubleType()),
                 ('author_id_user_city_count_bin',typ.IntegerType()),
@@ -132,31 +114,98 @@ class SparkFEProcess:
                 ('author_id_item_city_count_ratio',typ.DoubleType()),
                 ('author_id_music_id_count_bin',typ.IntegerType()),
                 ('author_id_music_id_count_ratio',typ.DoubleType()),
-                ('author_id_item_pub_hour_count_bin',typ.IntegerType()),
-                ('author_id_item_pub_hour_count_ratio',typ.DoubleType()),
-                ('uid_user_city_channel_device_count_bin',typ.IntegerType()),  #改成uid_channel_device
-                ('uid_user_city_channel_device_count_ratio',typ.DoubleType()),  #改成uid_channel_device
-                ('author_id_item_city_music_id_item_pub_hour_count_bin',typ.IntegerType()),
-                ('author_id_item_city_music_id_item_pub_hour_count_ratio',typ.DoubleType()),
+                ('uid_channel_device_count_bin',typ.IntegerType()),  #改成uid_channel_device
+                ('uid_channel_device_count_ratio',typ.DoubleType()),  #改成uid_channel_device
+                ('author_id_item_city_music_id_count_bin',typ.IntegerType()),
+                ('author_id_item_city_music_id_count_ratio',typ.DoubleType()),
             ]
 
         actionLogSchema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
 
         df_actLog_test = sqlContext.createDataFrame(actLog_test_rdd,actionLogSchema)
-        #删除不需要的两列
-
         df_actLog_test.show(1,truncate=False)
         # df_actLog_test.printSchema()
 
         print('start to read actLog_train_step2')
-        train_file_path = rootPath + 'actLog_train_step2'
+        train_file_path = rootPath + 'actLog_train_single_cross'
         actLog_train_rdd = self.sc.pickleFile(train_file_path)
         # print(actLog_train_rdd.take(5))
         df_actLog_train = sqlContext.createDataFrame(actLog_train_rdd,actionLogSchema)
-        #删除不需要的两列
 
+        print("对duration_time和time_day 根据finish、like进行分组")
+        def DurationLikeBin(x):
+            if x <=2:
+                return 1
+            elif 2<x<=12:
+                return 2
+            elif 12<x<=15:
+                return 3
+            elif 15<x<=22:
+                return 4
+            elif 22<x<=42:
+                return 5
+            else:
+                return 6
+        converDurationLikeBin=udf(lambda x :DurationLikeBin(x), typ.IntegerType())
+        df_actLog_train = df_actLog_train.withColumn("duration_time_bin_like", converDurationLikeBin(df_actLog_train.duration_time))
+        df_actLog_test = df_actLog_test.withColumn("duration_time_bin_like", converDurationLikeBin(df_actLog_test.duration_time))
+
+        def DurationFinishBin(x):
+            if x <=2:
+                return 1
+            elif 2<x<=12:
+                return 2
+            elif 12<x<=26:
+                return 3
+            elif 26<x<=42:
+                return 4
+            else:
+                return 5
+        converDurationFinishBin=udf(lambda x :DurationFinishBin(x), typ.IntegerType())
+        df_actLog_train = df_actLog_train.withColumn("duration_time_bin_finish", converDurationFinishBin(df_actLog_train.duration_time))
+        df_actLog_test = df_actLog_test.withColumn("duration_time_bin_finish", converDurationFinishBin(df_actLog_test.duration_time))
+
+
+        def TimeLikeBin(x):
+            if x >=822:
+                return 1
+            elif 810<=x<822:
+                return 2
+            elif 781<=x<810:
+                return 3
+            elif 748<=x<781:
+                return 4
+            elif 726<=x<748:
+                return 5
+            elif 646<=x<726:
+                return 6
+            else:
+                return 7
+
+        converTimeLikeBin=udf(lambda x :TimeLikeBin(x), typ.IntegerType())
+        df_actLog_train = df_actLog_train.withColumn("time_day_bin_like", converTimeLikeBin(df_actLog_train.time_day))
+        df_actLog_test = df_actLog_test.withColumn("time_day_bin_like", converTimeLikeBin(df_actLog_test.time_day))
+
+
+        def TimeFinshBin(x):
+            if x >=795:
+                return 1
+            elif 792<=x<795:
+                return 2
+            elif 632<=x<792:
+                return 3
+            else:
+                return 4
+
+        converTimeFinshBinBin=udf(lambda x :TimeFinshBin(x), typ.IntegerType())
+        df_actLog_train = df_actLog_train.withColumn("time_day_bin_finish", converTimeFinshBinBin(df_actLog_train.time_day))
+        df_actLog_test = df_actLog_test.withColumn("time_day_bin_finish", converTimeFinshBinBin(df_actLog_test.time_day))
+
+        #删除原始列
+        df_actLog_train=df_actLog_train.drop("duration_time").drop("time_day")
+        df_actLog_test=df_actLog_test.drop("duration_time").drop("time_day")
         df_actLog_train.show(1,truncate=False)
-        # df_actLog_train.printSchema()
+        df_actLog_train.printSchema()
 
         print('start to read nlp_topic_feature2')
         nlp_file_path = rootPath + 'nlp_topic_feature2'
@@ -211,8 +260,9 @@ class SparkFEProcess:
         df_train=df_actLog_train.join(df_nlp_topic,'item_id','left')\
                       .join(df_face,'item_id','left')  \
                       .join(df_face_train,"uid",'left')
+
         print("查看表结构")
-        print("schema,为下一步读取数据做准备")
+        print("schema,为下一步build_data读取数据做准备")
         df_train.printSchema()
         df_test.printSchema()
 
@@ -230,6 +280,8 @@ class SparkFEProcess:
         #三表关联后，有些item_id是没有title的，导致title部分数据可能存在nan值，这里要进行缺失值填充
         #类别变量填充-1，连续变量用均值填充
         #对'title_topic'，'title_words_unique','title_length'这一列填充-1即可
+
+        #这里music_id_count_bin应该在之前已经填充好了，可以去掉
         df_train=df_train.na.fill({'music_id_count_bin':-1,'music_id_count_ratio':0,\
                                    'title_words_unique':-1,'title_length':-1,'title_topic': -1})
         df_test=df_test.na.fill({'music_id_count_bin':-1,'music_id_count_ratio':0,\

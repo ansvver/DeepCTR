@@ -140,17 +140,17 @@ class SparkFEProcess:
         print("--------1、针对uid，authorid，musicid等组合的正负样本数量统计特征--------")
         print("交叉特征的正负样本数量统计")
         posneg_feats_list = []
-        posneg_feats_list.append(["duration_time"])
-        posneg_feats_list.append(["time_day"])
+        # posneg_feats_list.append(["duration_time"])
+        # posneg_feats_list.append(["time_day"])
         print('cross count')
         users = ['uid']
-        authors = ['author_id', 'item_city', 'channel', 'music_id', 'device','time_day','item_pub_hour']
+        authors = ['author_id', 'item_city', 'channel', 'music_id','item_pub_hour']
 
         posneg_feats_list.extend([[u_col, a_col] for u_col in users for a_col in authors])
         posneg_feats_list.append(['uid','author_id', 'channel'])
         posneg_feats_list.append(['uid', 'author_id', 'music_id'])
-        posneg_feats_list.append(['uid','author_id', 'channel','time_day'])
-        posneg_feats_list.append(['uid', 'author_id', 'music_id','time_day'])
+        # posneg_feats_list.append(['uid','author_id', 'channel','time_day'])
+        # posneg_feats_list.append(['uid', 'author_id', 'music_id','time_day'])
 
         print("计算以下交叉特征的正负样本比例")  #有2、3、4维的交叉特征
         print(posneg_feats_list)
@@ -176,13 +176,13 @@ class SparkFEProcess:
                                                                  ,df_train[group_cols[2]].cast(typ.StringType()))
                 df_test=df_test.withColumn(new_feature, fn.concat_ws('_',df_test[group_cols[0]].cast(typ.StringType()),df_test[group_cols[1]].cast(typ.StringType()))
                                                                  ,df_test[group_cols[2]].cast(typ.StringType()))
-            if len(group_cols)==4:
-
-                print("开始处理4维交叉变量")
-                df_train=df_train.withColumn(new_feature, fn.concat_ws('_',df_train[group_cols[0]].cast(typ.StringType()),df_train[group_cols[1]].cast(typ.StringType()))
-                                                                 ,df_train[group_cols[2]].cast(typ.StringType()) ,df_train[group_cols[3]].cast(typ.StringType()))
-                df_test=df_test.withColumn(new_feature, fn.concat_ws('_',df_test[group_cols[0]].cast(typ.StringType()),df_test[group_cols[1]].cast(typ.StringType()))
-                                                                 ,df_test[group_cols[2]].cast(typ.StringType()) ,df_test[group_cols[3]].cast(typ.StringType()))
+            # if len(group_cols)==4:
+            #
+            #     print("开始处理4维交叉变量")
+            #     df_train=df_train.withColumn(new_feature, fn.concat_ws('_',df_train[group_cols[0]].cast(typ.StringType()),df_train[group_cols[1]].cast(typ.StringType()))
+            #                                                      ,df_train[group_cols[2]].cast(typ.StringType()) ,df_train[group_cols[3]].cast(typ.StringType()))
+            #     df_test=df_test.withColumn(new_feature, fn.concat_ws('_',df_test[group_cols[0]].cast(typ.StringType()),df_test[group_cols[1]].cast(typ.StringType()))
+            #                                                      ,df_test[group_cols[2]].cast(typ.StringType()) ,df_test[group_cols[3]].cast(typ.StringType()))
 
             for target in ["like","finish"] :
                 df3=df_train.groupby(new_feature).count().withColumnRenamed('count',new_feature+'_count')

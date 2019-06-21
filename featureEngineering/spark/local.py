@@ -12,6 +12,7 @@ from pyspark.sql.functions import udf
 from pyspark.sql.functions import monotonically_increasing_id
 import numpy as np
 import gc
+import matplotlib.pyplot as plt
 
 conf=SparkConf().setAppName("miniProject").setMaster("local[*]")
 sc=SparkContext.getOrCreate(conf)
@@ -21,95 +22,121 @@ logger.LogManager.getLogger("org").setLevel(logger.Level.ERROR)
 logger.LogManager.getLogger("akka").setLevel(logger.Level.ERROR)
 logger.LogManager.getRootLogger().setLevel(logger.Level.ERROR)
 
-pathFile="C:/data/douyinData/train_1w.txt"
-
+# pathFile="D:/douyinData/train_1w.txt"
+pathFile="D:/douyinData/final_track2_train.txt"
 rawRdd_train = sc.textFile(pathFile).map(lambda line : line.split('\t'))
 print('finish read rdd, start to init action log rdd:')
-# actionLogRdd_train = rawRdd_train.map(
-#     lambda x :(int(x[0]), int(x[1]), int(x[2]), int(x[3]), int(x[4]), int(x[5]),
-#                int(x[6]), int(x[7]), int(x[8]), int(x[9]), int(x[10]), int(x[11])))
+actionLogRdd_train = rawRdd_train.map(
+            lambda x :(int(x[0]), int(x[1]), int(x[2]), int(x[3]), int(x[4]), int(x[5]),
+                       int(x[6]), int(x[7]), int(x[8]), int(x[9]), int(x[10]), int(x[11])))
 sqlContext = SQLContext(sc)
-# labels=[('uid',typ.IntegerType()),
-#     ('user_city',typ.IntegerType()),
-#     ('item_id',typ.IntegerType()),
-#     ('author_id',typ.IntegerType()),
-#     ('item_city',typ.IntegerType()),
-#     ('channel',typ.IntegerType()),
-#     ('finish',typ.IntegerType()),
-#     ('like',typ.IntegerType()),
-#     ('music_id',typ.IntegerType()),
-#     ('device',typ.IntegerType()),
-#     ('time',typ.LongType()),
-#     ('duration_time',typ.IntegerType())]
-# actionLogSchema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
-#
-# df_train = sqlContext.createDataFrame(actionLogRdd_train, actionLogSchema)
-
-print("duration_time应该根据喜欢和不喜欢来分箱")
-print("查看duration_time的分布")
-
-# duration_times_like = rawRdd_train.filter(lambda x: int(x[7])==1).map(
-#     lambda x : int(x[11])).collect()
-# duration_times_unlike = rawRdd_train.filter(lambda x: int(x[7])==0).map(
-#     lambda x : int(x[11])).collect()
-duration_times_like=rawRdd_train.map(
-      lambda x :( int(x[7]), int(x[11])))
-labels=[('like',typ.IntegerType()),
+labels=[('uid',typ.IntegerType()),
+    ('user_city',typ.IntegerType()),
+    ('item_id',typ.IntegerType()),
+    ('author_id',typ.IntegerType()),
+    ('item_city',typ.IntegerType()),
+    ('channel',typ.IntegerType()),
+    ('finish',typ.IntegerType()),
+    ('like',typ.IntegerType()),
+    ('music_id',typ.IntegerType()),
+    ('device',typ.IntegerType()),
+    ('time',typ.LongType()),
     ('duration_time',typ.IntegerType())]
+actionLogSchema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
 
-Schema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
-df = sqlContext.createDataFrame(duration_times_like, Schema)
+df_train = sqlContext.createDataFrame(actionLogRdd_train, actionLogSchema)
 
-df_count=df.groupBy(['duration_time','like']).count()
-df_count.show()
-#根据df_count画图，count作为列，duration_time作为行，like作为两个对比的列
+print("------------1、通过时间戳获取年月日时分，(没有工作日特征，月日交叉表示节日特征,年份转化有问题)-----------------")
+
+#作品发布时间-作品发布的最早时间,转化为day
+time_min = df_train.select(fn.min(df_train['time'])).collect()
+df_train=df_train.withColumn('time_day', ((df_train.time-fn.lit(time_min[0][0])) /fn.lit(3600 * 24)).cast(typ.IntegerType()))
+'''
+print('--------2、对duration_time 和time_day  进行处理  count、sum_like 、sum_finish')
+df_new=df_train.select(["duration_time","time_day","finish","like"])
+gdf1=df_new.groupBy("duration_time")
+df2=gdf1.agg(fn.count("finish").alias("count"),fn.sum("finish").alias("sum_finish"),fn.sum("like").alias("sum_like"))
+df2.show()
+df2.toPandas().to_csv("D:/douyinData/duration_time_explore.csv",index=False)
+
+gdf2=df_new.groupBy("time_day")
+df3=gdf2.agg(fn.count("finish").alias("count"),fn.sum("finish").alias("sum_finish"),fn.sum("like").alias("sum_like"))
+df3.show()
+df3.toPandas().to_csv("D:/douyinData/time_day_explore.csv",index=False)
+'''
+print("对duration_time和time_day 根据finish、like进行分组")
+
+def DurationLikeBin(x):
+    if x <=2:
+        return 1
+    elif 2<x<=12:
+        return 2
+    elif 12<x<=15:
+        return 3
+    elif 15<x<=22:
+        return 4
+    elif 22<x<=42:
+        return 5
+    else:
+        return 6
+converDurationLikeBin=udf(lambda x :DurationLikeBin(x), typ.IntegerType())
+df = df_train.withColumn("duration_time_bin_like", converDurationLikeBin(df_train.duration_time))
+df.select("duration_time_bin_like").show(5)
+
+def DurationFinishBin(x):
+    if x <=2:
+        return 1
+    elif 2<x<=12:
+        return 2
+    elif 12<x<=26:
+        return 3
+    elif 26<x<=42:
+        return 4
+    else:
+        return 5
+converDurationFinishBin=udf(lambda x :DurationFinishBin(x), typ.IntegerType())
+df = df_train.withColumn("duration_time_bin_finish", converDurationFinishBin(df_train.duration_time))
+df.select("duration_time_bin_finish").show(5)
+
+def TimeLikeBin(x):
+    if x >=822:
+        return 1
+    elif 810<=x<822:
+        return 2
+    elif 781<=x<810:
+        return 3
+    elif 748<=x<781:
+        return 4
+    elif 726<=x<748:
+        return 5
+    elif 646<=x<726:
+        return 6
+    else:
+        return 7
+
+converTimeLikeBin=udf(lambda x :TimeLikeBin(x), typ.IntegerType())
+df = df_train.withColumn("time_day_bin_like", converTimeLikeBin(df_train.time_day))
+df.select("time_day_bin_like").show(5)
 
 
+def TimeFinshBin(x):
+    if x >=795:
+        return 1
+    elif 792<=x<795:
+        return 2
+    elif 632<=x<792:
+        return 3
+    else:
+        return 4
+
+converTimeFinshBinBin=udf(lambda x :TimeFinshBin(x), typ.IntegerType())
+df = df_train.withColumn("time_day_bin_finish", converTimeFinshBinBin(df_train.time_day))
+df.select("time_day_bin_finish").show(5)
 
 
-
-
-#
-# import matplotlib.pyplot as plt
-# fig,(ax0,ax1) = plt.subplots(nrows=2,figsize=(9,6))
-# #第二个参数是柱子宽一些还是窄一些，越大越窄越密
-# ax0.hist(duration_times_like,20,normed=1,histtype='bar',facecolor='yellowgreen')  #,alpha=0.75
-# ##pdf概率分布图，一万个数落在某个区间内的数有多少个
-# ax0.set_title('duration_like')
-# ax1.hist(duration_times_unlike,20,normed=1,histtype='bar',facecolor='pink')  #,alpha=0.75,cumulative=True,rwidth=0.8
-# #cdf累计概率函数，cumulative累计。比如需要统计小于5的数的概率
-# ax1.set_title("duration_unlike")
-# fig.subplots_adjust(hspace=0.4)
-# plt.show()
-
-
-# plt.hist(duration_times, bins=20, color='lightblue', normed=False)
-# fig = plt.gcf()
-# fig.set_size_inches(16, 10)
-# plt.savefig("duration_time.png",transparent=True,format='png')
-# plt.show()
-
-#
-# print("------------1、通过时间戳获取年月日时分，(没有工作日特征，月日交叉表示节日特征,年份转化有问题)-----------------")
-#
-# #作品发布时间-作品发布的最早时间,转化为day
-# time_min = df_train.select(fn.min(df_train['time'])).collect()
-# df_train=df_train.withColumn('time_day', ((df_train.time-fn.lit(time_min[0][0])) /fn.lit(3600 * 24)).cast(typ.IntegerType()))
-# df_train=df_train.withColumn('time_strDate',fn.from_unixtime(df_train.time , "yyyy-MM-dd HH:mm:ss"))
-# #将 unix 格式的时间戳转换为指定格式的日期,提取小时
-# df_train=df_train.withColumn('item_pub_month',fn.from_unixtime(df_train.time , "M").cast(typ.IntegerType()))
-# df_train=df_train.withColumn('item_pub_day',fn.from_unixtime(df_train.time , "d").cast(typ.IntegerType()))
-# df_train=df_train.withColumn('item_pub_hour',fn.from_unixtime(df_train.time , "k").cast(typ.IntegerType()))
-# df_train=df_train.withColumn('item_pub_minute',fn.from_unixtime(df_train.time , "m").cast(typ.IntegerType()))
-# print("查看month,day,hour,minute的提取是否正确")
-# df_train.show(truncate=False)
-# df_train=df_train.drop('time_strDate')
-# df_train=df_train.drop('time')
-#
 # print("--------1、针对uid，authorid，musicid等组合的正负样本数量统计特征--------")
 # print("交叉特征的正负样本数量统计")
 # posneg_feats_list = []
-#
 # print('cross count')
 # users = ['uid']
 # authors = ['author_id', 'item_city', 'channel', 'music_id', 'device','time_day','item_pub_hour']
