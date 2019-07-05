@@ -170,8 +170,9 @@ class DeepFM(torch.nn.Module):
         """
             deep part
         """
-        #总共有三层神经网络层，第一层为embedding 层，linear_1
-        #另外两层linear_2, linear_3 为两层隐含层
+        #第一层为embedding 输入层，linear_0
+        #另外两次隐含层：linear_1, linear_2
+
         if self.use_deep:
             print("Init deep part")
             if not self.use_fm and not self.use_ffm:
@@ -181,7 +182,8 @@ class DeepFM(torch.nn.Module):
             if self.is_deep_dropout:
                 self.linear_0_dropout = nn.Dropout(self.dropout_deep[0])
 
-            #定义embedding 层: linear_1
+            #定义隐含层 linear_1
+            # embedding 层为输入
             self.linear_1 = nn.Linear(self.field_size * self.embedding_size, deep_layers[0])
             if self.is_batch_norm:
                 self.batch_norm_1 = nn.BatchNorm1d(deep_layers[0])
@@ -189,7 +191,7 @@ class DeepFM(torch.nn.Module):
                 self.linear_1_dropout = nn.Dropout(self.dropout_deep[1])
 
             #定义两层的线性隐含层
-            #加上embedding层也做drop_out, 总共有三层drop_out,
+            #加上embedding层也做drop_out, 总共有三次drop_out,
             #所以dropout_deep的系数数组长度为3
             for i, h in enumerate(self.deep_layers[1:], 1):
                 setattr(self,'linear_'+str(i+1), nn.Linear(self.deep_layers[i-1], self.deep_layers[i]))
@@ -197,7 +199,6 @@ class DeepFM(torch.nn.Module):
                 if self.is_batch_norm:
                     setattr(self, 'batch_norm_' + str(i + 1), nn.BatchNorm1d(deep_layers[i]))
 
-                #linear_2, linear_3 的输出dropout处理
                 if self.is_deep_dropout:
                     setattr(self, 'linear_'+str(i+1)+'_dropout', nn.Dropout(self.dropout_deep[i+1]))
 
@@ -208,7 +209,7 @@ class DeepFM(torch.nn.Module):
     def forward(self, Xi, Xv):
         """
         :param Xi_train: index input tensor, batch_size * k * 1 ： batch_size * 39 * 1
-        :param Xv_train: value input tensor, batch_size * k * 1 ： batch_size * 39 * 1
+        :param Xv_train: value input tensor, batch_size * k * 1 ： batch_size * 39
         :return: the last output
         """
         """
@@ -217,7 +218,7 @@ class DeepFM(torch.nn.Module):
                                                     for feature_size in self.feature_sizes])
             fm_second_order_embeddings = nn.ModuleList([nn.Embedding(feature_size, self.embedding_size) 
                                                     for feature_size in self.feature_sizes])
-            self.feature_sizes： #list， 保存了每个field的feature value 数量
+            self.feature_sizes： #list， 保存了每个field的feature index 数量
         """
         if self.use_fm:
             fm_first_order_emb_arr = [(torch.sum(emb(Xi[:, i, :]), 1).t() * Xv[:, i]).t()
@@ -363,6 +364,8 @@ class DeepFM(torch.nn.Module):
         elif self.optimizer_type == 'adag':
             optimizer = torch.optim.Adagrad(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
 
+        #相比于BCELoss, BCEWithLogitsLoss对最终的输出已经做了一次Sigmoid层处理
+        #所以不用手动再增加一层最终的sigmoid层
         criterion = F.binary_cross_entropy_with_logits
 
         train_result = []
@@ -385,10 +388,10 @@ class DeepFM(torch.nn.Module):
                 optimizer.zero_grad()
                 outputs = model(batch_xi, batch_xv)
                 loss = criterion(outputs, batch_y)
-                loss.backward()
-                optimizer.step()
+                loss.backward()    #误差反向传播
+                optimizer.step()  #更新参数
 
-                total_loss += loss.data[0]
+                total_loss += loss.item()
                 if self.verbose:
                     if i % 100 == 99:  # print every 100 mini-batches
                         eval = self.evaluate(batch_xi, batch_xv, batch_y)
@@ -467,6 +470,9 @@ class DeepFM(torch.nn.Module):
             batch_size = 16384
         batch_iter = x_size // batch_size
         criterion = F.binary_cross_entropy_with_logits
+        '''
+        eval model
+        '''
         model = self.eval()
         for i in range(batch_iter+1):
             offset = i * batch_size
@@ -482,7 +488,7 @@ class DeepFM(torch.nn.Module):
             pred = F.sigmoid(outputs).cpu()
             y_pred.extend(pred.data.numpy())
             loss = criterion(outputs, batch_y)
-            total_loss += loss.data[0]*(end-offset)
+            total_loss += loss.item()*(end-offset)
         total_metric = self.eval_metric(y,y_pred)
         return total_loss/x_size, total_metric
 
