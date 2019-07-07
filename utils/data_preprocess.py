@@ -29,7 +29,9 @@ def write_criteo_category_index(file_path, cate_dict_arr):
     for i, cate_dict in enumerate(cate_dict_arr):
         for key in cate_dict:
             f.write(str(i)+','+key+','+str(cate_dict[key])+'\n')
-
+#第一列：field id
+#第二列：具体某个feature值，category型变量
+#第三列：该category值对应的index值
 def load_criteo_category_index(file_path):
     f = open(file_path,'r')
     cate_dict = []
@@ -143,6 +145,8 @@ def gen_emb_input_file(filepath, emb_file, dir_path):
             filed = int(filed)
             row.append(str(cate_dict[filed][index]))
         fw.write(','.join(row)+'\n')
+
+
 
 
 #

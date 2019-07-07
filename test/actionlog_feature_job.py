@@ -156,8 +156,8 @@ def generate_user_statistic_features(df, feature_dir):
                           functions.countDistinct('music_id').alias('distinct_cnt_musicId'))
 
     user_distinct_cnt_df = user_distinct_cnt_df.select(['uid', 'distinct_cnt_authorId', 'distinct_cnt_musicId'])
-    uid_authorIdCnt_bins = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-    uid_musicIdCnt_bins = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+    uid_authorIdCnt_bins = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    uid_musicIdCnt_bins = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
     user_distinct_cnt_df = discretization_functions(user_distinct_cnt_df, uid_authorIdCnt_bins,
                                                     'distinct_cnt_authorId', 'distinct_cnt_authorId_bins')
@@ -180,16 +180,17 @@ def generate_user_statistic_features(df, feature_dir):
 
 
     print('user action features:')
-    uid_finish_ratio_perecnts = [0,  50, 75, 100]
+    uid_finish_ratio_perecnts = [0, 25, 50, 75, 100]
     discretization_bins = get_discretizationBins(np.array(user_action_df.select('user_finish_ratio').rdd.collect()),
                                                  uid_finish_ratio_perecnts)
     user_action_df = discretization_functions(user_action_df, discretization_bins,
                                               'user_finish_ratio', 'user_finish_ratio_bins')
     print(discretization_bins)
 
-    uid_like_ratio_perecnts = [0, 50, 75, 100]
-    discretization_bins = get_discretizationBins(np.array(user_action_df.select('user_like_ratio').rdd.collect()),
-                                                 uid_like_ratio_perecnts)
+    uid_like_ratio_perecnts = [0, 25, 50, 75, 100]
+    # discretization_bins = get_discretizationBins(np.array(user_action_df.select('user_like_ratio').rdd.collect()),
+    #                                              uid_like_ratio_perecnts)
+    discretization_bins = [0, 0.02, 0.05, 0.1, 0.3, 0.5, 0.7, 1.0]
     user_action_df = discretization_functions(user_action_df, discretization_bins,
                                                'user_like_ratio', 'user_like_ratio_bins')
     print(discretization_bins)
@@ -232,8 +233,9 @@ def generate_item_statistic_features(df, feature_dir):
                                        'item_finish_ratio', 'item_finish_ratio_bins')
 
     item_like_ratio_percents = [0, 25, 50, 75, 100]
-    discretization_bins = get_discretizationBins(np.array(item_df.select('item_like_ratio').rdd.collect()),
-                                                 item_like_ratio_percents)
+    # discretization_bins = get_discretizationBins(np.array(item_df.select('item_like_ratio').rdd.collect()),
+    #                                              item_like_ratio_percents)
+    discretization_bins = [0, 0.02, 0.05, 0.1, 0.3, 0.5, 0.7, 1.0]
     print(discretization_bins)
     item_df = discretization_functions(item_df, discretization_bins,
                                        'item_like_ratio', 'item_like_ratio_bins')
@@ -271,8 +273,9 @@ def generate_author_statistic_features(df, feature_dir):
                                          'author_finish_ratio', 'author_finish_ratio_bins')
 
     author_like_ratio_percents = [0, 25, 50, 75, 100]
-    discretization_bins = get_discretizationBins(np.array(author_df.select('author_like_ratio').rdd.collect()),
-                                                 author_like_ratio_percents)
+    # discretization_bins = get_discretizationBins(np.array(author_df.select('author_like_ratio').rdd.collect()),
+    #                                              author_like_ratio_percents)
+    discretization_bins = [0, 0.02, 0.05, 0.1, 0.3, 0.5, 0.7, 1.0]
     print(discretization_bins)
     author_df = discretization_functions(author_df, discretization_bins,
                                          'author_like_ratio', 'author_like_ratio_bins')
@@ -312,8 +315,9 @@ def generate_music_statistic_features(df, feature_dir):
     music_df = discretization_functions(music_df, discretization_bins,
                                         'music_finish_ratio', 'music_finish_ratio_bins')
     music_like_ratio_percents = [0, 25, 50, 75, 100]
-    discretization_bins = get_discretizationBins(np.array(music_df.select('music_like_ratio').rdd.collect()),
-                                                 music_like_ratio_percents)
+    # discretization_bins = get_discretizationBins(np.array(music_df.select('music_like_ratio').rdd.collect()),
+    #                                              music_like_ratio_percents)
+    discretization_bins = [0, 0.02, 0.05, 0.1, 0.3, 0.5, 0.7, 1.0]
     print(discretization_bins)
     music_df = discretization_functions(music_df, discretization_bins,
                                          'music_like_ratio', 'music_like_ratio_bins')
@@ -352,8 +356,9 @@ def generate_device_statistic_features(df, feature_dir):
     device_df = discretization_functions(device_df, discretization_bins,
                                         'device_finish_ratio', 'device_finish_ratio_bins')
     device_like_ratio_percents = [0, 25, 50, 75, 100]
-    discretization_bins = get_discretizationBins(np.array(device_df.select('device_like_ratio').rdd.collect()),
-                                                 device_like_ratio_percents)
+    # discretization_bins = get_discretizationBins(np.array(device_df.select('device_like_ratio').rdd.collect()),
+    #                                              device_like_ratio_percents)
+    discretization_bins = [0, 0.02, 0.05, 0.1, 0.3, 0.5, 0.7, 1.0]
     print(discretization_bins)
     device_df = discretization_functions(device_df, discretization_bins,
                                         'device_like_ratio', 'device_like_ratio_bins')
@@ -387,14 +392,14 @@ def build_train_input(train_actionLog_df):
     '''
     构建基础特征
     '''
-    basic_feature_dir = config.feature_root_dir + 'basic/'
+    basic_feature_dir = config.hdfs_feature_root_dir + 'basic/'
     basic_df = train_actionLog_df.select([c for c in ['user_city', 'item_city', 'channel', 'time', 'duration_time']])
     basic_feature_df = generate_basic_features(train_actionLog_df, basic_feature_dir)
 
     '''
     构建统计特征
     '''
-    statistic_feature_dir = config.feature_root_dir + 'original_statistic/'
+    statistic_feature_dir = config.hdfs_feature_root_dir + 'statistic/'
     sub_columns = high_sparse_features + ['like', 'finish']
     statistic_df = train_actionLog_df.select([c for c in sub_columns])
     generate_user_statistic_features(statistic_df, statistic_feature_dir)

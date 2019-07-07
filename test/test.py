@@ -131,7 +131,41 @@ import random as rd
 
 import  config
 
-basic_feature_list = []
-for item in config.basic_feature_schema:
-    basic_feature_list.append(item[0])
-print(basic_feature_list)
+# basic_feature_list = []
+# for item in config.basic_feature_schema:
+#     basic_feature_list.append(item[0])
+# print(basic_feature_list)
+
+def read_train_data(file_path, field_size):
+    result = {'label': [], 'index': [], 'value': [], 'feature_sizes':[]}
+    cate_dict = []
+    for i in range(field_size):
+        print (i)
+        cate_dict.append(set())
+    f = open(file_path, 'r')
+    for line in f:
+        datas = line.strip().split('\t')
+        result['label'].append(int(datas[0]))
+        indexs = [int(item) for item in datas[1:]]
+        values = [1 for i in range(field_size)]
+
+        for i in range(1, field_size + 1):
+            j = i - 1
+            print ("j:" + str(j))
+            cate_dict[j].add(int(datas[i]))
+
+        result['index'].append(indexs)
+        result['value'].append(values)
+
+    for item in cate_dict:
+        print (item)
+        max_index = max(item)
+
+        result['feature_sizes'].append(max_index + 1)  #每个field的feature value 数量
+
+    print (result['feature_sizes'])
+
+file_path = 'C:\conf_test\deepctr\data\deepfm-train-data'
+field_size = 16
+read_train_data(file_path, field_size)
+

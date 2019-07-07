@@ -73,8 +73,7 @@ class DeepFM(torch.nn.Module):
                  verbose = False, random_seed = 950104, weight_decay = 0.0,
                  use_fm = True, use_ffm = False, use_deep = True,
                  loss_type = 'logloss', eval_metric = roc_auc_score,
-                 use_cuda = True, n_class = 1, greater_is_better = True
-                 ):
+                 use_cuda = True, n_class = 1, greater_is_better = True):
         super(DeepFM, self).__init__()
         self.field_size = field_size
         self.feature_sizes = feature_sizes
@@ -170,7 +169,8 @@ class DeepFM(torch.nn.Module):
         """
             deep part
         """
-        #第一层为embedding 输入层，linear_0
+        #第一层为embedding
+        #输入层，linear_0
         #另外两次隐含层：linear_1, linear_2
 
         if self.use_deep:
@@ -310,6 +310,156 @@ class DeepFM(torch.nn.Module):
             total_sum = torch.sum(x_deep,1)
         return total_sum
 
+
+    def fit(self, Xi_train, Xv_train, y_train, Xi_valid=None, Xv_valid=None,
+                y_valid = None, ealry_stopping=False, refit=False, save_path = None):
+        """
+        :param Xi_train: [[ind1_1, ind1_2, ...], [ind2_1, ind2_2, ...], ..., [indi_1, indi_2, ..., indi_j, ...], ...]
+                        indi_j is the feature index of feature field j of sample i in the training set, size: 458044 * 39
+        :param Xv_train: [[val1_1, val1_2, ...], [val2_1, val2_2, ...], ..., [vali_1, vali_2, ..., vali_j, ...], ...]
+                        vali_j is the feature value of feature field j of sample i in the training set, size: 458044 * 39
+                        vali_j can be either binary (1/0, for binary/categorical features) or float (e.g., 10.24, for numerical features)
+        :param y_train: label of each sample in the training set
+        :param Xi_valid: list of list of feature indices of each sample in the validation set
+        :param Xv_valid: list of list of feature values of each sample in the validation set
+        :param y_valid: label of each sample in the validation set
+        :param ealry_stopping: perform early stopping or not
+        :param refit: refit the model on the train+valid dataset or not
+        :param save_path: the path to save the model
+        :return:
+        """
+        """
+        pre_process
+        """
+        if save_path and not os.path.exists('/'.join(save_path.split('/')[0:-1])):
+            print("Save path is not existed!")
+            return
+
+        if self.verbose:
+            print("pre_process data ing...")
+        is_valid = False
+        Xi_train = np.array(Xi_train).reshape((-1,self.field_size,1))  #458044 * 39 * 1
+        Xv_train = np.array(Xv_train)
+        y_train = np.array(y_train)
+        x_size = Xi_train.shape[0]
+        if Xi_valid:
+            Xi_valid = np.array(Xi_valid).reshape((-1,self.field_size,1))
+            Xv_valid = np.array(Xv_valid)
+            y_valid = np.array(y_valid)
+            x_valid_size = Xi_valid.shape[0]
+            is_valid = True
+        if self.verbose:
+            print("pre_process data finished")
+
+        """
+            train model
+        """
+        model = self.train()
+
+        optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        if self.optimizer_type == 'adam':
+            optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        elif self.optimizer_type == 'rmsp':
+            optimizer = torch.optim.RMSprop(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        elif self.optimizer_type == 'adag':
+            optimizer = torch.optim.Adagrad(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+
+        #相比于BCELoss, BCEWithLogitsLoss对最终的输出已经做了一次Sigmoid层处理
+        #所以不用手动再增加一层最终的sigmoid层
+        criterion = F.binary_cross_entropy_with_logits
+
+        train_result = []
+        valid_result = []
+        for epoch in range(self.n_epochs):
+            total_loss = 0.0
+            batch_iter = x_size // self.batch_size
+            epoch_begin_time = time()
+            batch_begin_time = time()
+            for i in range(batch_iter + 1):
+                offset = i * self.batch_size
+                end = min(x_size, offset + self.batch_size)
+                if offset == end:
+                    break
+                batch_xi = Variable(torch.LongTensor(Xi_train[offset : end]))  #batch_size * 39 * 1
+                batch_xv = Variable(torch.FloatTensor(Xv_train[offset : end]))
+                batch_y = Variable(torch.FloatTensor(y_train[offset : end]))
+                if self.use_cuda:
+                    batch_xi, batch_xv, batch_y = batch_xi.cuda(), batch_xv.cuda(), batch_y.cuda()
+                optimizer.zero_grad()
+                outputs = model(batch_xi, batch_xv)
+                loss = criterion(outputs, batch_y)
+                loss.backward()    #误差反向传播
+                optimizer.step()  #更新参数
+
+                total_loss += loss.item()
+                if self.verbose:
+                    if i % 100 == 99:  # print every 100 mini-batches
+                        eval = self.evaluate(batch_xi, batch_xv, batch_y)
+                        print('[%d, %5d] loss: %.6f metric: %.6f time: %.1f s' %
+                              (epoch + 1, i + 1, total_loss/100.0, eval, time()-batch_begin_time))
+                        total_loss = 0.0
+                        batch_begin_time = time()
+
+            train_loss, train_eval = self.eval_by_batch(Xi_train,Xv_train,y_train,x_size)
+            train_result.append(train_eval)
+            print('*'*50)
+            print('[%d] loss: %.6f metric: %.6f time: %.1f s' %
+                  (epoch + 1, train_loss, train_eval, time()-epoch_begin_time))
+            print('*'*50)
+
+            if is_valid:
+                valid_loss, valid_eval = self.eval_by_batch(Xi_valid, Xv_valid, y_valid, x_valid_size)
+                valid_result.append(valid_eval)
+                print('*' * 50)
+                print('[%d] loss: %.6f metric: %.6f time: %.1f s' %
+                      (epoch + 1, valid_loss, valid_eval,time()-epoch_begin_time))
+                print('*' * 50)
+            if save_path:
+                torch.save(self.state_dict(),save_path)
+            if is_valid and ealry_stopping and self.training_termination(valid_result):
+                print("early stop at [%d] epoch!" % (epoch+1))
+                break
+
+        # fit a few more epoch on train+valid until result reaches the best_train_score
+        if is_valid and refit:
+            if self.verbose:
+                print("refitting the model")
+            if self.greater_is_better:
+                best_epoch = np.argmax(valid_result)
+            else:
+                best_epoch = np.argmin(valid_result)
+            best_train_score = train_result[best_epoch]
+            Xi_train = np.concatenate((Xi_train,Xi_valid))
+            Xv_train = np.concatenate((Xv_train,Xv_valid))
+            y_train = np.concatenate((y_train,y_valid))
+            x_size = x_size + x_valid_size
+            self.shuffle_in_unison_scary(Xi_train,Xv_train,y_train)
+            for epoch in range(64):
+                batch_iter = x_size // self.batch_size
+                for i in range(batch_iter + 1):
+                    offset = i * self.batch_size
+                    end = min(x_size, offset + self.batch_size)
+                    if offset == end:
+                        break
+                    batch_xi = Variable(torch.LongTensor(Xi_train[offset:end]))
+                    batch_xv = Variable(torch.FloatTensor(Xv_train[offset:end]))
+                    batch_y = Variable(torch.FloatTensor(y_train[offset:end]))
+                    if self.use_cuda:
+                        batch_xi, batch_xv, batch_y = batch_xi.cuda(), batch_xv.cuda(), batch_y.cuda()
+                    optimizer.zero_grad()
+                    outputs = model(batch_xi, batch_xv)
+                    loss = criterion(outputs, batch_y)
+                    loss.backward()
+                    optimizer.step()
+                train_loss, train_eval = self.eval_by_batch(Xi_train, Xv_train, y_train, x_size)
+                if save_path:
+                    torch.save(self.state_dict(), save_path)
+                if abs(best_train_score-train_eval) < 0.001 or \
+                        (self.greater_is_better and train_eval > best_train_score) or \
+                        ((not self.greater_is_better) and train_result < best_train_score):
+                    break
+            if self.verbose:
+                print("refit finished")
 
     def fit(self, Xi_train, Xv_train, y_train, Xi_valid=None, Xv_valid=None,
                 y_valid = None, ealry_stopping=False, refit=False, save_path = None):

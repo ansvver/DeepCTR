@@ -1,7 +1,8 @@
 from pyspark.sql.types import *
 import  pyspark.sql.types as types
 
-feature_root_dir = '/user/hadoop/icmechallenge2019/track2/test/features/'
+hdfs_feature_root_dir = '/user/hadoop/icmechallenge2019/track2/test/features/'
+local_feature_root_dir = '/data/code/DeepCTR/test/'
 
 actionLog_schema = [('uid', types.StringType()),
                   ('user_city', types.StringType()),
