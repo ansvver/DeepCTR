@@ -158,7 +158,7 @@ class SparkFEProcess:
         sqlContext = SQLContext(self.sc)
 
         print('--------2、统计特征：count、ratio、nunique、ctr相关特征')
-        print("计算基础特征和交叉特征的count、类别偏好的ratio")
+        print("计算交叉特征的count、类别偏好的ratio")
         count_feats_list = []
         print('cross count')
         users = ['uid']

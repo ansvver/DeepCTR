@@ -98,7 +98,7 @@ class SparkFEProcess:
 
         dfactionLog_train=dfactionLog_train.filter(dfactionLog_train['duration_time']<=300)
         dfactionLog_test=dfactionLog_test.filter(dfactionLog_test['duration_time']<=300)
-        #train和test合并，并且保存保存train的数量，以便拆分   union可能会改变frame中的顺序
+        #train和test合并，并且保存train的数量，以便拆分   union可能会改变frame中的顺序
         # df=dfactionLog_train.union(dfactionLog_test)
         # train_count=dfactionLog_train.count()
         # print("训练集的数量"+str(train_count))
@@ -189,7 +189,7 @@ class SparkFEProcess:
         df_test=df_test.drop('time')
 
         print('--------2、统计特征：count、ratio、nunique、ctr相关特征')
-        print("计算基础特征和交叉特征的count、类别偏好的ratio")
+        print("计算基础特征的count、类别偏好的ratio")
         count_feats_list = []
 
         print('single feature count')

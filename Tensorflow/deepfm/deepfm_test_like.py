@@ -347,3 +347,4 @@ if __name__ == '__main__':
         print("平均auc为{}".format(total_auc/cnt))
 
 
+

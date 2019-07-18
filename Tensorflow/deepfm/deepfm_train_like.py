@@ -279,25 +279,6 @@ if __name__ == '__main__':
     gpu_config = tf.ConfigProto()
     gpu_config.gpu_options.allow_growth = True
 
-    colsForFinish=['user_city_count_ratio','item_id_count_ratio','author_id_count_ratio','item_city_count_ratio',\
-                   'music_id_count_ratio','device_count_ratio','uid_author_id_count_ratio','uid_item_city_count_ratio',\
-                   'uid_channel_count_ratio','uid_music_id_count_ratio','uid_device_count_ratio','author_id_channel_count_ratio',\
-                   'author_id_user_city_count_ratio','author_id_item_city_count_ratio','author_id_music_id_count_ratio',\
-                   'uid_channel_device_count_ratio','author_id_item_city_music_id_count_ratio','beauty','relative_position_0',\
-                   'relative_position_1','relative_position_2','relative_position_3','uid_max_beauty','uid_avg_beauty',\
-                   'uid_male_ratio,channel','item_pub_hour','uid_count_bin','user_city_count_bin','item_id_count_bin',\
-                   'author_id_count_bin','item_city_count_bin','music_id_count_bin','device_count_bin','uid_author_id_count_bin',\
-                   'uid_item_city_count_bin','uid_channel_count_bin','uid_music_id_count_bin','uid_device_count_bin',\
-                   'author_id_channel_count_bin','author_id_user_city_count_bin','author_id_item_city_count_bin',\
-                   'author_id_music_id_count_bin','uid_channel_device_count_bin','author_id_item_city_music_id_count_bin',\
-                   # 'duration_time_bin_like',\
-                   'duration_time_bin_finish',\
-                   # 'time_day_bin_like',
-                   'time_day_bin_finish',\
-                   'title_words_unique','title_length','title_topic','gender']
-    # 取两列
-    # house_info[['price',tradetypename']]
-
     #对finish和like进行分别训练
     traindata={}
     localPath='/data/code/DeepCTR/data/dataForDeepfmTest/'
@@ -344,13 +325,13 @@ if __name__ == '__main__':
         if args.is_training:
             for i in range(args.epoch):
                 print('epoch %s:' % i)
-                for j in range(2):
+                for j in range(9):
                     index_filename='train_feature_index_'+str(j)+'.csv'
                     value_filename='train_feature_value_'+str(j)+'.csv'
                     label_filename='train_label_'+str(j)+'.csv'
 
-                    feature_index=pd.read_csv(localPath+index_filename)[colsForFinish]
-                    feature_value=pd.read_csv(localPath+value_filename)[colsForFinish]
+                    feature_index=pd.read_csv(localPath+index_filename)
+                    feature_value=pd.read_csv(localPath+value_filename)
                     traindata['xi'] = feature_index.values.tolist()  #变成了list
                     traindata['xv'] = feature_value.values.tolist()
 
@@ -399,5 +380,6 @@ if __name__ == '__main__':
                     print('保存方式三：保存验证精度最高的三代，且把每次的验证精度也随之保存下来，则我们可以生成一个txt文件用于保存')
                     print('Model.save函数中添加max_to_keep,saver=tf.train.Saver(max_to_keep=3)')
                   '''
+
 
 

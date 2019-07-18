@@ -21,7 +21,7 @@ class Args():
     learning_rate = 0.01 #或者0.001 学习率选择过小，会出现收敛速度慢的情况
     l2_reg_rate = 0.01
     eval_metric=roc_auc_score,
-    checkpoint_dir = '/data/code/DeepCTR/data/saver_finish/ckpt'
+    checkpoint_dir = '/data/code/DeepCTR/data/saver_like/ckpt'
     is_training = True
     #is_training = False
 
@@ -273,14 +273,14 @@ if __name__ == '__main__':
 
     #对finish和like进行分别训练
     traindata={}
-    localPath='/data/code/DeepCTR/data/dataForDeepfmTest618/'
+    localPath='/data/code/DeepCTR/data/dataForDeepfmTest/'
     print('读取feat_dim.txt中的值，即feature_sizes')
     f = open(localPath+"feat_dim.txt","r")
     feat_dim=int(f.read())
     f.close()
     traindata['feat_dim']=feat_dim
     #第十份数据作为测试集
-    i=4
+    i=9
     '''
     input_filename='df_concate_'+str(i)+'.csv'
     inputfile=pd.read_csv(localPath+input_filename)
@@ -331,7 +331,7 @@ if __name__ == '__main__':
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
-        cnt = int(len(traindata['y_train_finish']) / args.batch_size)
+        cnt = int(len(traindata['y_train_like']) / args.batch_size)
         print('time all:%s' % cnt)   #一次训练batch_size个样本，迭代cnt次
         sys.stdout.flush()
 
@@ -339,7 +339,7 @@ if __name__ == '__main__':
         Model.restore(sess, args.checkpoint_dir)
         total_auc=0
         for j in range(0, cnt):
-            X_index, X_value, y = get_batch(traindata['xi'], traindata['xv'], traindata['y_train_finish'], args.batch_size, j)
+            X_index, X_value, y = get_batch(traindata['xi'], traindata['xv'], traindata['y_train_like'], args.batch_size, j)
             #result = Model.predict(sess, X_index, X_value)   #result可以得到对like和finish的预测值
             test_auc= Model.evaluate(sess, X_index, X_value, y)
             print('test_auc:',test_auc)   #？这里我应该计算一个平均auc
