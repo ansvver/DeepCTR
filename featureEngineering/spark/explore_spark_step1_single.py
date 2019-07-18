@@ -162,7 +162,7 @@ class SparkFEProcess:
     def data_explore(self,df_train,df_test):
 
         sqlContext = SQLContext(self.sc)
-        print("把duration_time当作连续变量")
+
 
         print("------------1、通过时间戳获取年月日时分，(没有工作日特征，月日交叉表示节日特征,年份转化有问题)-----------------")
 

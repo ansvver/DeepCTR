@@ -21,10 +21,12 @@ class Args():
     learning_rate = 0.01 #或者0.001 学习率选择过小，会出现收敛速度慢的情况
     l2_reg_rate = 0.01
     eval_metric=roc_auc_score,
-    checkpoint_dir = '/data/code/DeepCTR/data/saver_like/ckpt'
+    checkpoint_dir = '/data/code/DeepCTR/data/saver_finish/ckpt'
     is_training = True
     #is_training = False
+
     # deep_activation = tf.nn.relu
+
 
 class model():
     def __init__(self, args):
@@ -216,18 +218,8 @@ class model():
         :return: metric of the evaluation
         """
         y_pred = self.predict(sess, Xi, Xv)
-        # print('查看y和y_pred的返回形式有何不同')
-        #
-        # print(np.array(y_pred).shape)
-        # print(np.array(y_pred)[0].shape)
-        # print(y.shape)
-        #
-        # print(np.array(np.array(y_pred)[0]))
-        # print(y)
-
         return roc_auc_score(y,np.array(np.array(y_pred)[0]))
 
-    #train_result = self.evaluate(Xi_train, Xv_train, y_train)
 
     def save(self, sess, path):
         saver = tf.train.Saver(tf.global_variables())
@@ -279,37 +271,16 @@ if __name__ == '__main__':
     gpu_config = tf.ConfigProto()
     gpu_config.gpu_options.allow_growth = True
 
-    colsForFinish=['user_city_count_ratio','item_id_count_ratio','author_id_count_ratio','item_city_count_ratio',\
-                   'music_id_count_ratio','device_count_ratio','uid_author_id_count_ratio','uid_item_city_count_ratio',\
-                   'uid_channel_count_ratio','uid_music_id_count_ratio','uid_device_count_ratio','author_id_channel_count_ratio',\
-                   'author_id_user_city_count_ratio','author_id_item_city_count_ratio','author_id_music_id_count_ratio',\
-                   'uid_channel_device_count_ratio','author_id_item_city_music_id_count_ratio','beauty','relative_position_0',\
-                   'relative_position_1','relative_position_2','relative_position_3','uid_max_beauty','uid_avg_beauty',\
-                   'uid_male_ratio,channel','item_pub_hour','uid_count_bin','user_city_count_bin','item_id_count_bin',\
-                   'author_id_count_bin','item_city_count_bin','music_id_count_bin','device_count_bin','uid_author_id_count_bin',\
-                   'uid_item_city_count_bin','uid_channel_count_bin','uid_music_id_count_bin','uid_device_count_bin',\
-                   'author_id_channel_count_bin','author_id_user_city_count_bin','author_id_item_city_count_bin',\
-                   'author_id_music_id_count_bin','uid_channel_device_count_bin','author_id_item_city_music_id_count_bin',\
-                   # 'duration_time_bin_like',\
-                   'duration_time_bin_finish',\
-                   # 'time_day_bin_like',
-                   'time_day_bin_finish',\
-                   'title_words_unique','title_length','title_topic','gender']
-    # 取两列
-    # house_info[['price',tradetypename']]
-
     #对finish和like进行分别训练
     traindata={}
-    localPath='/data/code/DeepCTR/data/dataForDeepfmTest/'
+    localPath='/data/code/DeepCTR/data/dataForDeepfmTest618/'
     print('读取feat_dim.txt中的值，即feature_sizes')
     f = open(localPath+"feat_dim.txt","r")
     feat_dim=int(f.read())
     f.close()
     traindata['feat_dim']=feat_dim
-
-    #循环读取数据，不断迭代
-    min_loss=float("inf")
-
+    #第十份数据作为测试集
+    i=4
     '''
     input_filename='df_concate_'+str(i)+'.csv'
     inputfile=pd.read_csv(localPath+input_filename)
@@ -327,77 +298,52 @@ if __name__ == '__main__':
     traindata['y_train_finish'] = label_finish
     traindata['y_train_like'] = label_like
     '''
-    index_filename='train_feature_index_0.csv'
+
+
+    index_filename='train_feature_index_'+str(i)+'.csv'
+    value_filename='train_feature_value_'+str(i)+'.csv'
+    label_filename='train_label_'+str(i)+'.csv'
+
     feature_index=pd.read_csv(localPath+index_filename)
-    traindata['xi'] = feature_index.values.tolist()
+    feature_value=pd.read_csv(localPath+value_filename)
+    traindata['xi'] = feature_index.values.tolist()  #变成了list
+    traindata['xv'] = feature_value.values.tolist()
+
+    print('读取标签文件'+str(i))
+    train_label=pd.read_csv(localPath+label_filename)
+    label_finish=train_label['finish'].values
+    label_like=train_label['like'].values
+    label_finish = label_finish.reshape(len(label_finish), 1)
+    label_like = label_like.reshape(len(label_like), 1)
+    traindata['y_train_finish'] = label_finish
+    traindata['y_train_like'] = label_like
+    # print( data['y_train_finish'][:10])
+
+
     args.feature_sizes = traindata['feat_dim']
     args.field_size = len(traindata['xi'][0])
 
-    cnt=0
+    args.is_training = False
+
     with tf.Session(config=gpu_config) as sess:
         Model = model(args)
         # init variables
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
 
+        cnt = int(len(traindata['y_train_finish']) / args.batch_size)
+        print('time all:%s' % cnt)   #一次训练batch_size个样本，迭代cnt次
         sys.stdout.flush()
-        if args.is_training:
-            for i in range(args.epoch):
-                print('epoch %s:' % i)
-                for j in range(2):
-                    index_filename='train_feature_index_'+str(j)+'.csv'
-                    value_filename='train_feature_value_'+str(j)+'.csv'
-                    label_filename='train_label_'+str(j)+'.csv'
 
-                    feature_index=pd.read_csv(localPath+index_filename)[colsForFinish]
-                    feature_value=pd.read_csv(localPath+value_filename)[colsForFinish]
-                    traindata['xi'] = feature_index.values.tolist()  #变成了list
-                    traindata['xv'] = feature_value.values.tolist()
-
-                    print('读取标签文件'+str(j))
-                    train_label=pd.read_csv(localPath+label_filename)
-                    label_finish=train_label['finish'].values
-                    label_like=train_label['like'].values
-                    label_finish = label_finish.reshape(len(label_finish), 1)
-                    label_like = label_like.reshape(len(label_like), 1)
-                    traindata['y_train_finish'] = label_finish
-                    traindata['y_train_like'] = label_like
-                    #这里的cnt应该是总的batch_size
-                    cnt = int(len(traindata['y_train_like']) / args.batch_size)
-                    print('time all:%s' % cnt)   #一次训练batch_size个样本，迭代cnt次
-                    for k in range(cnt):
-                        X_index, X_value, y = get_batch(traindata['xi'], traindata['xv'], traindata['y_train_like'], args.batch_size, k)
-                        # print('查看报错的数据行')
-                        # print(X_index)
-                        # print(X_value)
-                        # print(y)
-                        '''报错的原因是因为该行数据中存在nan值，导致loss为nan'''
-                        loss, step = Model.train(sess, X_index, X_value, y)
-
-                        '''
-                        print('保存方式一：每训练完一代的时候，都进行了保存，但后一次保存的模型会覆盖前一次的，最终只会保存最后一次')
-                        if j % 100 == 0:  #每100次迭代输出一次loss结果
-                            print('the times of training is %d, and the loss is %s' % (j, loss))
-                            Model.save(sess, args.checkpoint_dir)
-                        '''
-                        #print('保存方式二：想保存验证精度最高的一代，则加个中间变量和判断语句就可以了')
-                        if loss < min_loss:
-                            min_loss = loss
-                            try:
-                              train_auc= Model.evaluate(sess, X_index, X_value, y)
-                              if train_auc>0.68:
-                                Model.save(sess, args.checkpoint_dir)
-                                print('保留最好模型的loss及其对应的auc指标')    #由之前的训练可见，每个batch的数据差异太大
-                                print('loss:',min_loss,'train_auc:',train_auc)
-
-
-
-                            except Exception as e:
-                                print(e)
-
-                    '''
-                    print('保存方式三：保存验证精度最高的三代，且把每次的验证精度也随之保存下来，则我们可以生成一个txt文件用于保存')
-                    print('Model.save函数中添加max_to_keep,saver=tf.train.Saver(max_to_keep=3)')
-                  '''
+        #第10份数据当做是测试集，这样可以知道auc的值
+        Model.restore(sess, args.checkpoint_dir)
+        total_auc=0
+        for j in range(0, cnt):
+            X_index, X_value, y = get_batch(traindata['xi'], traindata['xv'], traindata['y_train_finish'], args.batch_size, j)
+            #result = Model.predict(sess, X_index, X_value)   #result可以得到对like和finish的预测值
+            test_auc= Model.evaluate(sess, X_index, X_value, y)
+            print('test_auc:',test_auc)   #？这里我应该计算一个平均auc
+            total_auc+=test_auc
+        print("平均auc为{}".format(total_auc/cnt))
 
 

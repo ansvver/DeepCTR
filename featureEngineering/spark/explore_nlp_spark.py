@@ -66,6 +66,7 @@ class SparkFEProcess:
     def data_describe(self):
         print('start to read data for rdd:')
         rawRdd_nlp = self.read_rdd('track2_title.txt').map(lambda line : eval(line))
+
         # print(rawRdd_nlp.take(10))
         #转化为dataframe,在不指定schema的情况下会自动推断
         sqlContext = SQLContext(self.sc)
@@ -111,8 +112,9 @@ class SparkFEProcess:
         # gc.collect()
         rescaledData.cache()
         lda = LDA(k=50,maxIter=200)
-        # lda = LDA(k=2,maxIter=5)
+        #lda = LDA(k=2,maxIter=5)
         ldaModel = lda.fit(rescaledData)
+
 
         transformed = ldaModel.transform(rescaledData)   #.select("topicDistribution")
         #结果显示 每个文档各个类别的权重, transformed表各列名
@@ -148,14 +150,68 @@ class SparkFEProcess:
         # print('观看topic是否为想要的数据格式，并保存于topic2中')
         df_topic2.show(5)
 
-        df=df.join(df_topic2,"item_id","left")   #UnboundLocalError: local variable 'df' referenced before assignment
-        df.printSchema()
+        df_nlp=df.join(df_topic2,"item_id","left")   #UnboundLocalError: local variable 'df' referenced before assignment
+        df_nlp.printSchema()
         #item_id|title_features |title_words_unique|title_length|title_features1 |title_topic|
 
         print('-------5.保存数据预处理结果-------')
         file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'nlp_topic_feature2'
         os.system("hadoop fs -rm -r {}".format(file_path))
-        df.rdd.map(tuple).saveAsPickleFile(file_path)
+        df_nlp.rdd.map(tuple).saveAsPickleFile(file_path)
+        print('数据保存结束')
+
+
+        print('start to read act data  only for uid and item_id :')
+        rawRdd_train = self.read_rdd('final_track2_train.txt').map(lambda line : line.split('\t'))
+        rawRdd_test = self.read_rdd('final_track2_test_no_anwser.txt').map(lambda line : line.split('\t'))
+        actionLogRdd_train = rawRdd_train.map(
+            lambda x :(int(x[0]), int(x[2])))
+        # total = actionLogRdd_train.count()
+        # print('total: ' + str(total))
+        actionLogRdd_test = rawRdd_test.map(
+            lambda x :(int(x[0]), int(x[2])))
+
+        sqlContext = SQLContext(self.sc)
+        labels=[('uid',typ.IntegerType()),
+            ('item_id',typ.IntegerType())
+            ]
+
+        actionLogSchema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
+
+        dfactionLog_train = sqlContext.createDataFrame(actionLogRdd_train, actionLogSchema)
+        dfactionLog_test = sqlContext.createDataFrame(actionLogRdd_test, actionLogSchema)
+
+        #根据item_id进行关联
+        # item_id|title_features||title_words_unique|title_length|title_features_1|title_topic
+        df_nlp=df_nlp.select(["item_id","title_words_unique","title_length"])
+
+        df_uid_nlp_test=dfactionLog_test.select(["uid","item_id"]).join(df_nlp,'item_id','left').drop("item_id")
+        df_uid_nlp_train=dfactionLog_train.select(["uid","item_id"]).join(df_nlp,'item_id','left').drop("item_id")
+        del dfactionLog_test
+        del dfactionLog_train
+        gc.collect()
+
+        #进行处理
+        gdf=df_uid_nlp_train.groupby("uid")
+        df1=gdf.agg(fn.max("title_words_unique").alias("uid_max_title_words_unique"),fn.avg("title_words_unique").alias("uid_avg_title_words_unique"),\
+                    fn.max("title_length").alias("uid_max_title_length"),fn.avg("title_length").alias("uid_avg_title_length")
+                    )
+        df1.show(1,truncate=False)
+        df_uid_train=df_uid_nlp_train.join(df1,'uid','left').drop("title_words_unique").drop("title_length")
+        df_uid_test=df_uid_nlp_test.join(df1,'uid','left').drop("title_words_unique").drop("title_length")
+
+        print("理论上应该只有uid，uid_max_beauty,uid_avg_beauty,uid_male_ratio")
+        df_uid_train.printSchema()
+        df_uid_test.printSchema()
+
+        print('-------保存df_uid_nlp数据-------')
+        file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'df_uid_nlp_train'
+        os.system("hadoop fs -rm -r {}".format(file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
+        df_uid_train.rdd.map(tuple).saveAsPickleFile(file_path)
+
+        file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'df_uid_nlp_test'
+        os.system("hadoop fs -rm -r {}".format(file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
+        df_uid_test.rdd.map(tuple).saveAsPickleFile(file_path)
         print('数据保存结束')
 
         #检验上面创建lda模型中使用的参数 ll越大越好，lp越小越好
@@ -167,11 +223,14 @@ class SparkFEProcess:
         '''
 
         #保存ldaModel,训练集转化的时候直接加载该模型,目前没有必要保存模型，保存df_topic即可
-
-        # distributed_model_path = self.parser.get("hdfs_path", "hdfs_data_path") + "lda_distributed_model"
-        # ldaModel.save(distributed_model_path)
-        # #加载的语句
-        # sameLdaModel = DistributedLDAModel.load(distributed_model_path)
+        print("开始保存模型")
+        distributed_model_path = self.parser.get("hdfs_path", "hdfs_data_path") + "lda_distributed_model"
+        ldaModel.save(distributed_model_path)
+        print("保存模型结束")
+        #加载的语句
+        print("加载模型")
+        sameLdaModel = DistributedLDAModel.load(distributed_model_path)
+        print("加载模型结束")
 
         # ---------------------------------3 模型及描述------------------------------
         # 模型通过describeTopics、topicsMatrix来描述

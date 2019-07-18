@@ -22,16 +22,13 @@ class SparkFEProcess:
 
         sparkConf = SparkConf().setAppName("build data for deepfm") \
             .set("spark.ui.showConsoleProgress", "false") \
+            .set("spark.driver.maxResultSize", "2g") \
             .set("set spark.sql.execution.arrow.enabled","true")
         self.sc = SparkContext(conf=sparkConf)
         self.sc.broadcast(self.parser)
         self.init_logger()
 
-    # def init_config(self):
-    #     config_file = workspace_path + 'resource/config.ini'
-    #     parser = configparser.ConfigParser()
-    #     parser.read(config_file)
-    #     return  parser
+
     def init_config(self):
         current_path = os.path.dirname(os.path.realpath(__file__))
         workspace_path = current_path.split('featureEngineering')[0]
@@ -69,41 +66,69 @@ class SparkFEProcess:
         #修改labels，根据前一个文件的printSchema信息
         labels=[('uid',typ.IntegerType()),
                 ('item_id',typ.IntegerType()),
-                ("author_id_item_city_music_id_item_pub_hour",typ.StringType()),
-                ("uid_user_city_channel_device",typ.StringType()),
-                ("author_id_item_pub_hour",typ.StringType()),
-                ("author_id_music_id",typ.StringType()),
-                ("author_id_item_city",typ.StringType()),
-                ("author_id_user_city",typ.StringType()),
-                ("author_id_channel",typ.StringType()),
-                ("uid_item_pub_hour",typ.StringType()),
-                ("uid_device",typ.StringType()),
-                ("uid_music_id",typ.StringType()),
-                ("uid_channel",typ.StringType()),
-                ("uid_item_city",typ.StringType()),
-                ("uid_author_id",typ.StringType()),
-                ("uid_user_city",typ.StringType()),
-                ("uid_item_id",typ.StringType()),
-
+                # ('device',typ.IntegerType()),
+                # ('music_id',typ.IntegerType()),
+                # ('item_city',typ.IntegerType()),
+                # ('author_id',typ.IntegerType()),
+                # ('user_city',typ.IntegerType()),
                 ('channel',typ.IntegerType()),
                 ('finish',typ.IntegerType()),
                 ('like',typ.IntegerType()),
-                ('duration_time',typ.IntegerType()),
+                # ('item_pub_month',typ.IntegerType()),
+                # ('item_pub_day',typ.IntegerType()),
                 ('item_pub_hour',typ.IntegerType()),
-                ('device_Cnt_bin',typ.IntegerType()),
-                ('authorid_Cnt_bin',typ.IntegerType()),
-                ('musicid_Cnt_bin',typ.IntegerType()),
-                ('uid_playCnt_bin',typ.IntegerType()),
-                ('itemid_playCnt_bin',typ.IntegerType()),
-                ('user_city_score_bin',typ.IntegerType()),
-                ('item_city_score_bin',typ.IntegerType()),
+                # ('item_pub_minute',typ.IntegerType()),
+                ("uid_count_bin",typ.IntegerType()),
+                ("user_city_count_bin",typ.IntegerType()),
+                ("user_city_count_ratio",typ.DoubleType()),
+                ("item_id_count_bin",typ.IntegerType()),
+                ("item_id_count_ratio",typ.DoubleType()),
+                ("author_id_count_bin",typ.IntegerType()),
+                ("author_id_count_ratio",typ.DoubleType()),
+                ('item_city_count_bin',typ.IntegerType()),
+                ('item_city_count_ratio',typ.DoubleType()),
+                ('music_id_count_bin',typ.IntegerType()),
+                ('music_id_count_ratio',typ.DoubleType()),
+                ('device_count_bin',typ.IntegerType()),
+                ('device_count_ratio',typ.DoubleType()),
+                ('uid_author_id_count_bin',typ.IntegerType()),
+                ('uid_author_id_count_ratio',typ.DoubleType()),
+                ('uid_item_city_count_bin',typ.IntegerType()),
+                ('uid_item_city_count_ratio',typ.DoubleType()),
+                ('uid_channel_count_bin',typ.IntegerType()),
+                ('uid_channel_count_ratio',typ.DoubleType()),
+                ('uid_music_id_count_bin',typ.IntegerType()),
+                ('uid_music_id_count_ratio',typ.DoubleType()),
+                ('uid_device_count_bin',typ.IntegerType()),
+                ('uid_device_count_ratio',typ.DoubleType()),
+                ('author_id_channel_count_bin',typ.IntegerType()),
+                ('author_id_channel_count_ratio',typ.DoubleType()),
+                ('author_id_user_city_count_bin',typ.IntegerType()),
+                ('author_id_user_city_count_ratio',typ.DoubleType()),
+                ('author_id_item_city_count_bin',typ.IntegerType()),
+                ('author_id_item_city_count_ratio',typ.DoubleType()),
+                ('author_id_music_id_count_bin',typ.IntegerType()),
+                ('author_id_music_id_count_ratio',typ.DoubleType()),
+                ('uid_channel_device_count_bin',typ.IntegerType()),
+                ('uid_channel_device_count_ratio',typ.DoubleType()),
+                ('author_id_item_city_music_id_count_bin',typ.IntegerType()),
+                ('author_id_item_city_music_id_count_ratio',typ.DoubleType()),
+                ('duration_time_bin_like',typ.IntegerType()),
+                ('duration_time_bin_finish',typ.IntegerType()),
+                ('time_day_bin_like',typ.IntegerType()),
+                ('time_day_bin_finish',typ.IntegerType()),
+                ('title_words_unique',typ.IntegerType()),
+                ('title_length',typ.IntegerType()),
                 ('title_topic',typ.IntegerType()),
                 ('gender',typ.IntegerType()),
                 ('beauty',typ.DoubleType()),
                 ('relative_position_0',typ.DoubleType()),
                 ('relative_position_1',typ.DoubleType()),
                 ('relative_position_2',typ.DoubleType()),
-                ('relative_position_3',typ.DoubleType())
+                ('relative_position_3',typ.DoubleType()),
+                ('uid_max_beauty',typ.DoubleType()),
+                ('uid_avg_beauty',typ.DoubleType()),
+                ('uid_male_ratio',typ.DoubleType())
             ]
         actionLogSchema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
         df_test = sqlContext.createDataFrame(actLog_test_rdd,actionLogSchema)
@@ -118,7 +143,7 @@ class SparkFEProcess:
         print('df_train_count:19622340')     #全部记录数：22384139
         print('df_test_count:2761799')
 
-        localPath='/data/code/DeepCTR/data/dataForDeepfmTest618/'
+        localPath='/data/code/DeepCTR/data/dataForDeepfmTest628/'    #这个目录下目前没有数据
         train_label = df_train['finish','like']
         test_label = df_test['finish','like']
         print('保存test_label')
@@ -131,24 +156,27 @@ class SparkFEProcess:
         cnt = 1
         #需要处理的特征
         #类别型特征如下：
-        ca_col = [ 'channel','time_day','item_pub_month','item_pub_day','item_pub_hour','item_pub_minute',\
+        #这几个特征要区别处理
+        # 'duration_time_bin_like','duration_time_bin_finish','time_day_bin_like','time_day_bin_finish',\
+        ca_col = [ 'channel','item_pub_hour',\
                 'uid_count_bin','user_city_count_bin','item_id_count_bin','author_id_count_bin','item_city_count_bin',\
-                'music_id_count_bin',  'device_count_bin',  'duration_time_count_bin',   'uid_item_id_count_bin',\
+                'music_id_count_bin',  'device_count_bin', \
                 'uid_author_id_count_bin','uid_item_city_count_bin',  'uid_channel_count_bin',     'uid_music_id_count_bin',\
-                'uid_device_count_bin',   'uid_item_pub_hour_count',  'author_id_channel_count_bin', 'author_id_user_city_count_bin',\
-                'author_id_item_city_count_bin','author_id_music_id_count_bin','author_id_item_pub_hour_count_bin',\
-                'uid_user_city_channel_device_count_bin','author_id_item_city_music_id_item_pub_hour_count_bin',\
-
+                'uid_device_count_bin',   'author_id_channel_count_bin', 'author_id_user_city_count_bin',\
+                'author_id_item_city_count_bin','author_id_music_id_count_bin',\
+                'uid_channel_device_count_bin','author_id_item_city_music_id_count_bin',\
+                'duration_time_bin_like','duration_time_bin_finish','time_day_bin_like','time_day_bin_finish',\
                 'title_words_unique','title_length', 'title_topic',\
                 'gender']
-        #连续型特征如下：
-        co_col=['uid_count_ratio','user_city_count_ratio','item_id_count_ratio','author_id_count_ratio','item_city_count_ratio',\
-                'music_id_count_ratio','device_count_ratio','duration_time_count_ratio','uid_item_id_count_ratio',\
-                'uid_author_id_count_ratio','uid_item_city_count_ratio','uid_channel_count_ratio','uid_music_id_count_ratio',\
-                'uid_device_count_ratio','uid_item_pub_hour_count_ratio','author_id_channel_count_ratio','author_id_user_city_count_ratio',\
-                'author_id_item_city_count_ratio','author_id_music_id_count_ratio','author_id_item_pub_hour_count_ratio',\
-                'uid_user_city_channel_device_count_ratio','author_id_item_city_music_id_item_pub_hour_count_ratio',\
 
+
+        #连续型特征如下：
+        co_col=['user_city_count_ratio','item_id_count_ratio','author_id_count_ratio','item_city_count_ratio',\
+                'music_id_count_ratio','device_count_ratio',\
+                'uid_author_id_count_ratio','uid_item_city_count_ratio','uid_channel_count_ratio','uid_music_id_count_ratio',\
+                'uid_device_count_ratio','author_id_channel_count_ratio','author_id_user_city_count_ratio',\
+                'author_id_item_city_count_ratio','author_id_music_id_count_ratio',\
+                'uid_channel_device_count_ratio','author_id_item_city_music_id_count_ratio',\
                 'beauty', 'relative_position_0','relative_position_1','relative_position_2','relative_position_3',\
                 'uid_max_beauty','uid_avg_beauty','uid_male_ratio']
 
@@ -198,11 +226,11 @@ class SparkFEProcess:
         train_label = train_label.coalesce(1).withColumn("id", monotonically_increasing_id())
 
         print('-------.开始保存训练数据-------')
-        #将训练集划分成20份，
-        segList= [i for i in range(0,df_train_count+1,df_train_count//20)]
+        #将训练集划分成30份，
+        segList= [i for i in range(0,df_train_count+1,df_train_count//8)]
         # print('train存储方案一：toPandas()后保存到本地')
         for i in range(len(segList)):
-            if i <=19:
+            if i <=7:
                 # print(i)
                 # print(segList[i],segList[i+1])
                 train_feature_index_i=feature_index_train.filter("id >={} and id <{}".format(segList[i],segList[i+1])).drop('id')
@@ -212,7 +240,6 @@ class SparkFEProcess:
                 train_feature_index_i.toPandas().to_csv(localPath+"train_feature_index_"+str(i)+".csv",index=False)
                 train_feature_value_i.toPandas().to_csv(localPath+"train_feature_value_"+str(i)+".csv",index=False)
                 train_label_i.toPandas().to_csv(localPath+"train_label_"+str(i)+".csv",index=False)
-
 
 
 

@@ -99,7 +99,7 @@ class SparkFEProcess:
         attrs = self.sc.parallelize(["relative_position_" + str(i) for i in range(4)]).zipWithIndex().collect()
         print("列名：", attrs)
         for name, index in attrs:
-            df = df.withColumn(name, df['relative_position'].getItem(index))
+            df = df.withColumn(name, fn.bround(df['relative_position'].getItem(index), scale=3))
         #删除 relative_position
         df_face =df.drop('relative_position')
         del df
@@ -140,28 +140,42 @@ class SparkFEProcess:
         del dfactionLog_train
         gc.collect()
 
-        #进行处理
+        #只对训练集中的uid进行处理
         gdf=df_uid_face_train.groupby("uid")
-        df1=gdf.agg(fn.max("beauty").alias("uid_max_beauty"),fn.avg("beauty").alias("uid_avg_beauty"),(fn.sum("gender")/fn.count("gender")).alias("uid_male_ratio"))
+        df1=gdf.agg(fn.max("beauty").alias("uid_max_beauty"),fn.bround(fn.avg("beauty"),scale=3).alias("uid_avg_beauty"),fn.bround((fn.sum("gender")/fn.count("gender")),scale=3).alias("uid_male_ratio"))
         df1.show(1,truncate=False)
-        df_uid_face_train=df_uid_face_train.join(df1,'uid','left').drop("gender").drop("beauty")
-        df_uid_face_test=df_uid_face_test.join(df1,'uid','left').drop("gender").drop("beauty")
-
-        print("理论上应该只有uid，uid_max_beauty,uid_avg_beauty,uid_male_ratio")
-        df_uid_face_train.printSchema()
-        df_uid_face_test.printSchema()
-
-
-
-        print('-------保存df_uid_face数据-------')
-        file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'df_uid_face_train'
+        #最终只保留df1即可
+        print('-------保存uid_face数据-------')
+        file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'uid_face_train'
         os.system("hadoop fs -rm -r {}".format(file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
-        df_uid_face_train.rdd.map(tuple).saveAsPickleFile(file_path)
-
-        file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'df_uid_face_test'
-        os.system("hadoop fs -rm -r {}".format(file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
-        df_uid_face_test.rdd.map(tuple).saveAsPickleFile(file_path)
+        df1.rdd.map(tuple).saveAsPickleFile(file_path)
         print('数据保存结束')
+
+
+        # print("删除多余的列，并去除重复记录")
+        # df_uid_face_train=df_uid_face_train.join(df1,'uid','left').drop("gender").drop("beauty")
+        # df_uid_face_test=df_uid_face_test.join(df1,'uid','left').drop("gender").drop("beauty")
+        # print("原有记录条数",df_uid_face_test.count())
+        #
+        # df_uid_face_train=df_uid_face_train.dropDuplicates()
+        # df_uid_face_test=df_uid_face_test.dropDuplicates()
+        # print("去重后记录条数",df_uid_face_test.count())
+        #
+        # print("理论上应该只有uid，uid_max_beauty,uid_avg_beauty,uid_male_ratio")  #这里的uid不是唯一的记录，令每一条记录都是唯一的
+        # df_uid_face_train.printSchema()
+        # df_uid_face_test.printSchema()
+        #
+        #
+        #
+        # print('-------保存df_uid_face数据-------')
+        # file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'df_uid_face_train'
+        # os.system("hadoop fs -rm -r {}".format(file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
+        # df_uid_face_train.rdd.map(tuple).saveAsPickleFile(file_path)
+        #
+        # file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'df_uid_face_test'
+        # os.system("hadoop fs -rm -r {}".format(file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
+        # df_uid_face_test.rdd.map(tuple).saveAsPickleFile(file_path)
+        # print('数据保存结束')
 
 
 

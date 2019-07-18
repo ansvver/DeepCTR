@@ -1,5 +1,3 @@
-#!/usr/local/bin/python
-
 from pyspark import SparkConf, SparkContext
 from  pyspark.sql import  *
 import  configparser
@@ -22,6 +20,7 @@ class SparkFEProcess:
 
         sparkConf = SparkConf().setAppName("feature engineering on spark of concate") \
             .set("spark.ui.showConsoleProgress", "false") \
+            .set("spark.driver.maxResultSize", "4g") \
             .set("set spark.sql.execution.arrow.enabled","true")
         self.sc = SparkContext(conf=sparkConf)
         self.sc.broadcast(self.parser)
@@ -60,10 +59,15 @@ class SparkFEProcess:
         except Exception as e:
             print(e)
 
+    def dropUnuseCols(self,df,unuse_col):
+        for col in unuse_col:
+            df=df.drop(col)
+        return df
+
     def data_describe(self):
         sqlContext = SQLContext(self.sc)
         rootPath=self.parser.get("hdfs_path", "hdfs_data_path")
-        print('start to read actLog_test_step2')
+        print('start to read actLog_test_single_cross')
         test_file_path = rootPath + 'actLog_test_single_cross'
         actLog_test_rdd = self.sc.pickleFile(test_file_path)
         #labels需要修改
@@ -126,11 +130,13 @@ class SparkFEProcess:
         df_actLog_test.show(1,truncate=False)
         # df_actLog_test.printSchema()
 
+
         print('start to read actLog_train_step2')
         train_file_path = rootPath + 'actLog_train_single_cross'
         actLog_train_rdd = self.sc.pickleFile(train_file_path)
         # print(actLog_train_rdd.take(5))
         df_actLog_train = sqlContext.createDataFrame(actLog_train_rdd,actionLogSchema)
+
 
         print("对duration_time和time_day 根据finish、like进行分组")
         def DurationLikeBin(x):
@@ -202,10 +208,16 @@ class SparkFEProcess:
         df_actLog_test = df_actLog_test.withColumn("time_day_bin_finish", converTimeFinshBinBin(df_actLog_test.time_day))
 
         #删除原始列
-        df_actLog_train=df_actLog_train.drop("duration_time").drop("time_day")
-        df_actLog_test=df_actLog_test.drop("duration_time").drop("time_day")
-        df_actLog_train.show(1,truncate=False)
-        df_actLog_train.printSchema()
+        print("删除没有必要的列")
+        unuse_col=['item_city','user_city','device','author_id','music_id',"duration_time","time_day"]  #'uid','item_id'这两列不能删除，后面提交结果的时候应该要用到
+        unuse_col=unuse_col+['item_pub_month','item_pub_day','item_pub_minute']
+        df_actLog_train=self.dropUnuseCols(df_actLog_train,unuse_col)
+        df_actLog_test=self.dropUnuseCols(df_actLog_test,unuse_col)
+
+        # df_actLog_train=df_actLog_train.drop("duration_time").drop("time_day")
+        # df_actLog_test=df_actLog_test.drop("duration_time").drop("time_day")
+        # df_actLog_train.show(1,truncate=False)
+        # df_actLog_train.printSchema()
 
         print('start to read nlp_topic_feature2')
         nlp_file_path = rootPath + 'nlp_topic_feature2'
@@ -215,11 +227,11 @@ class SparkFEProcess:
         #删除无用列
         df_nlp_topic=df_nlp_topic.drop("title_features")
         df_nlp_topic=df_nlp_topic.drop("title_features_1")
-        df_nlp_topic.show(2)
+        # df_nlp_topic.show(2)
         # df_nlp_topic.printSchema()
 
 
-        print("start to read item_face_feature")
+        print("start to read face_feature")
         face_file_path = rootPath + 'face_feature'
         face_rdd = self.sc.pickleFile(face_file_path)
         labels=[
@@ -233,6 +245,13 @@ class SparkFEProcess:
             ]
         faceSchema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
         df_face = sqlContext.createDataFrame(face_rdd,faceSchema)
+        #对所有这些列控制小数位数
+        df_face=df_face.withColumn('relative_position_0',fn.bround('relative_position_0', scale=3))
+        df_face=df_face.withColumn('relative_position_1',fn.bround('relative_position_1', scale=3))
+        df_face=df_face.withColumn('relative_position_2',fn.bround('relative_position_2', scale=3))
+        df_face=df_face.withColumn('relative_position_3',fn.bround('relative_position_3', scale=3))
+
+        # df_face=df_face.repartition(300)
 
         print('start to read uid_item_face_feature')
         face_trainfile_path = rootPath + 'df_uid_face_train'
@@ -250,17 +269,27 @@ class SparkFEProcess:
         itemfaceSchema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
         df_face_train = sqlContext.createDataFrame(face_trainrdd,itemfaceSchema)
         df_face_test = sqlContext.createDataFrame(face_testrdd,itemfaceSchema)
-        # df_face.show()
-        df_face.printSchema()
+        # 去重前记录条数 2761799
+        # 去重后记录条数 32615
+        df_face_train=df_face_train.dropDuplicates()
+        df_face_test=df_face_test.dropDuplicates()
 
-        print("三表进行关联")
+        df_face_train=df_face_train.withColumn('uid_max_beauty',fn.bround('uid_max_beauty', scale=3))
+        df_face_train=df_face_train.withColumn('uid_avg_beauty',fn.bround('uid_avg_beauty', scale=3))
+        df_face_train=df_face_train.withColumn('uid_male_ratio',fn.bround('uid_male_ratio', scale=3))
+        # df_face.show()
+        # df_face_train.printSchema()
+
+        print("三表进行关联")   #三个表的数据量不大，但是关联后数据量却比df_actLog_test增加近1000倍
         df_test=df_actLog_test.join(df_nlp_topic,'item_id','left')\
-                      .join(df_face,'item_id','left')  \
+                      .join(df_face,'item_id','left')\
                       .join(df_face_test,"uid",'left')
+
         df_train=df_actLog_train.join(df_nlp_topic,'item_id','left')\
-                      .join(df_face,'item_id','left')  \
+                       .join(df_face,'item_id','left')\
                       .join(df_face_train,"uid",'left')
 
+        # df_train.show(1,truncate=False)
         print("查看表结构")
         print("schema,为下一步build_data读取数据做准备")
         df_train.printSchema()
@@ -291,65 +320,82 @@ class SparkFEProcess:
         #关于uid进行分组，即用户看的每个用户看的所有item_id中max_beauty,avg_beauty
         #对连续变量填充缺失值
         print('输出各均值')
-        df=df_train.union(df_test)
-        mean_val = df.select(fn.mean(df['beauty'])).collect()
-        mean_beauty = mean_val[0][0] # to show the number
-        print(mean_beauty)
-        mean_val = df.select(fn.mean(df['relative_position_0'])).collect()
-        mean_relative_position0 = mean_val[0][0] # to show the number
-        print(mean_relative_position0)
-        mean_val = df.select(fn.mean(df['relative_position_1'])).collect()
-        mean_relative_position1 = mean_val[0][0] # to show the number
-        print(mean_relative_position1)
-        mean_val = df.select(fn.mean(df['relative_position_2'])).collect()
-        mean_relative_position2 = mean_val[0][0] # to show the number
-        print(mean_relative_position2)
-        mean_val = df.select(fn.mean(df['relative_position_3'])).collect()
-        mean_relative_position3 = mean_val[0][0] # to show the number
-        print(mean_relative_position3)
-        mean_val = df.select(fn.mean(df['uid_max_beauty'])).collect()
-        mean_max_beauty = mean_val[0][0] # to show the number
-        print(mean_max_beauty)
-        mean_val = df.select(fn.mean(df['uid_avg_beauty'])).collect()
-        mean_avg_beauty = mean_val[0][0] # to show the number
-        print(mean_avg_beauty)
+        mean_beauty=0.53
+        mean_relative_position0=0.392
+        mean_relative_position1=0.228
+        mean_relative_position2=0.212
+        mean_relative_position3=0.164
+        mean_max_beauty=0.792
+        mean_avg_beauty=0.53
+
+        # df=df_train.union(df_test)
+        # mean_val = df.select(fn.mean(df['beauty'])).collect()
+        # mean_beauty = round(mean_val[0][0],3) # to show the number
+        # print(mean_beauty)
+        # mean_val = df.select(fn.mean(df['relative_position_0'])).collect()
+        # mean_relative_position0 = round(mean_val[0][0],3) # to show the number
+        # print(mean_relative_position0)
+        # mean_val = df.select(fn.mean(df['relative_position_1'])).collect()
+        # mean_relative_position1 = round(mean_val[0][0] ,3)# to show the number
+        # print(mean_relative_position1)
+        # mean_val = df.select(fn.mean(df['relative_position_2'])).collect()
+        # mean_relative_position2 = round(mean_val[0][0],3) # to show the number
+        # print(mean_relative_position2)
+        # mean_val = df.select(fn.mean(df['relative_position_3'])).collect()
+        # mean_relative_position3 = round(mean_val[0][0],3) # to show the number
+        # print(mean_relative_position3)
+        # mean_val = df.select(fn.mean(df['uid_max_beauty'])).collect()
+        # mean_max_beauty = round(mean_val[0][0],3) # to show the number
+        # print(mean_max_beauty)
+        # mean_val = df.select(fn.mean(df['uid_avg_beauty'])).collect()
+        # mean_avg_beauty = round(mean_val[0][0],3) # to show the number
+        # print(mean_avg_beauty)
 
 
-        del df
+        # del df
         gc.collect()
 
         df_train=df_train.na.fill({'gender': -1, 'beauty': mean_beauty,'relative_position_0': mean_relative_position0, \
                        'relative_position_1': mean_relative_position1,'relative_position_2': mean_relative_position2,\
-                       'relative_position_3': mean_relative_position3,\
-                       'uid_max_beauty':mean_max_beauty, 'uid_avg_beauty':mean_avg_beauty, 'uid_male_ratio':0.5})
+                       'relative_position_3': mean_relative_position3 ,
+                        'uid_max_beauty':mean_max_beauty, 'uid_avg_beauty':mean_avg_beauty, 'uid_male_ratio':0.5})
         df_test=df_test.na.fill({'gender': -1, 'beauty': mean_beauty,'relative_position_0': mean_relative_position0, \
                        'relative_position_1': mean_relative_position1,'relative_position_2': mean_relative_position2,\
-                       'relative_position_3': mean_relative_position3,\
-                       'uid_max_beauty':mean_max_beauty, 'uid_avg_beauty':mean_avg_beauty, 'uid_male_ratio':0.5})
+                       'relative_position_3': mean_relative_position3 ,
+                        'uid_max_beauty':mean_max_beauty, 'uid_avg_beauty':mean_avg_beauty, 'uid_male_ratio':0.5})
+
         #
         print('填充缺失以后')
-        print('查看训练集中每一列的缺失比例')
-        df_train.agg(*[(1-(fn.count(c) /fn.count('*'))).alias(c+'_missing') for c in df_train.columns]).show()
-        print('查看测试集中每一列的缺失比例')
-        df_test.agg(*[(1-(fn.count(c) /fn.count('*'))).alias(c+'_missing') for c in df_test.columns]).show()
-
-
+        # print('查看训练集中每一列的缺失比例')
+        # df_train.agg(*[(1-(fn.count(c) /fn.count('*'))).alias(c+'_missing') for c in df_train.columns]).show()
+        # print('查看测试集中每一列的缺失比例')
+        # df_test.agg(*[(1-(fn.count(c) /fn.count('*'))).alias(c+'_missing') for c in df_test.columns]).show()
+        '''
         print("三表关联后的数据保存在hdfs")
-        file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'df_concate_train'
-        os.system("hadoop fs -rm -r {}".format(file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
-        df_train.rdd.map(tuple).saveAsPickleFile(file_path)
-
         file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'df_concate_test'
         os.system("hadoop fs -rm -r {}".format(file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
         df_test.rdd.map(tuple).saveAsPickleFile(file_path)
+        print('文件大小如下')
+        os.system("hadoop fs -du -s -h  {}".format(file_path))
+
+        file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'df_concate_train'
+        os.system("hadoop fs -rm -r {}".format(file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
+        df_train.rdd.map(tuple).saveAsPickleFile(file_path)
         print("hdfs保存结束")
+        print('文件大小如下')
+        os.system("hadoop fs -du -s -h  {}".format(file_path))
+        '''
+
+
 
 
         #以下代码会报错：java.net.SocketException: Connection reset
+        #报错
+        # Total size of serialized results of 162 tasks (1029.9 MB) is bigger than spark.driver.maxResultSize (1024.0 MB)
         print("三表关联后的数据保存到本地")
         localPath='/data/code/DeepCTR/data/dataForSkearn/'
-        df_train.toPandas().to_csv(localPath+"train.csv",index=False)
         df_test.toPandas().to_csv(localPath+"test.csv",index=False)
+        df_train.toPandas().to_csv(localPath+"train.csv",index=False)
         print("本地保存结束")
 
         #如果报错就分批保存  数据量太大了
@@ -362,4 +408,3 @@ if __name__ == "__main__":
     spark_job = SparkFEProcess()
     # df_train,df_test=
     spark_job.data_describe()
-

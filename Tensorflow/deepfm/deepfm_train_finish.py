@@ -1,6 +1,8 @@
 __author__ = 'zlx'
 import numpy as np
+import os
 import tensorflow as tf
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 tf.reset_default_graph()
 import sys
 from sklearn.metrics import roc_auc_score
@@ -17,11 +19,11 @@ class Args():
     deep_layers = [512, 256, 128]
     epoch = 100
     #batch_size = 2048
-    batch_size = 10000
+    batch_size = 100
     learning_rate = 0.01 #或者0.001 学习率选择过小，会出现收敛速度慢的情况
     l2_reg_rate = 0.01
     eval_metric=roc_auc_score,
-    checkpoint_dir = '/data/code/DeepCTR/data/saver_like/ckpt'
+    checkpoint_dir = '/data/code/DeepCTR/data/saver_finish/ckpt'
     is_training = True
     #is_training = False
     # deep_activation = tf.nn.relu
@@ -278,79 +280,51 @@ if __name__ == '__main__':
     args = Args()
     gpu_config = tf.ConfigProto()
     gpu_config.gpu_options.allow_growth = True
-
-    colsForFinish=['user_city_count_ratio','item_id_count_ratio','author_id_count_ratio','item_city_count_ratio',\
-                   'music_id_count_ratio','device_count_ratio','uid_author_id_count_ratio','uid_item_city_count_ratio',\
-                   'uid_channel_count_ratio','uid_music_id_count_ratio','uid_device_count_ratio','author_id_channel_count_ratio',\
-                   'author_id_user_city_count_ratio','author_id_item_city_count_ratio','author_id_music_id_count_ratio',\
-                   'uid_channel_device_count_ratio','author_id_item_city_music_id_count_ratio','beauty','relative_position_0',\
-                   'relative_position_1','relative_position_2','relative_position_3','uid_max_beauty','uid_avg_beauty',\
-                   'uid_male_ratio,channel','item_pub_hour','uid_count_bin','user_city_count_bin','item_id_count_bin',\
-                   'author_id_count_bin','item_city_count_bin','music_id_count_bin','device_count_bin','uid_author_id_count_bin',\
-                   'uid_item_city_count_bin','uid_channel_count_bin','uid_music_id_count_bin','uid_device_count_bin',\
-                   'author_id_channel_count_bin','author_id_user_city_count_bin','author_id_item_city_count_bin',\
-                   'author_id_music_id_count_bin','uid_channel_device_count_bin','author_id_item_city_music_id_count_bin',\
-                   # 'duration_time_bin_like',\
-                   'duration_time_bin_finish',\
-                   # 'time_day_bin_like',
-                   'time_day_bin_finish',\
-                   'title_words_unique','title_length','title_topic','gender']
-    # 取两列
-    # house_info[['price',tradetypename']]
-
     #对finish和like进行分别训练
     traindata={}
-    localPath='/data/code/DeepCTR/data/dataForDeepfmTest/'
+    localPath='/data/code/DeepCTR/data/dataForDeepfmTest618/'
     print('读取feat_dim.txt中的值，即feature_sizes')
     f = open(localPath+"feat_dim.txt","r")
     feat_dim=int(f.read())
+
     f.close()
     traindata['feat_dim']=feat_dim
 
     #循环读取数据，不断迭代
     min_loss=float("inf")
 
-    '''
-    input_filename='df_concate_'+str(i)+'.csv'
-    inputfile=pd.read_csv(localPath+input_filename)
-    #inputfile中选择列
-    feature_index=inputfile.ix[:,[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]]
-    feature_value=inputfile.ix[:,[18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33]]
-    label_finish=inputfile.ix[:,[34]].values
-    label_like=inputfile.ix[:,[35]].values
-
-    traindata['xi'] = feature_index.values.tolist()  #变成了list
-    traindata['xv'] = feature_value.values.tolist()
-
-    label_finish = label_finish.reshape(len(label_finish), 1)
-    label_like = label_like.reshape(len(label_like), 1)
-    traindata['y_train_finish'] = label_finish
-    traindata['y_train_like'] = label_like
-    '''
     index_filename='train_feature_index_0.csv'
     feature_index=pd.read_csv(localPath+index_filename)
+    #删除此次不需要的两列
+    feature_index.drop(['duration_time_bin_like', 'time_day_bin_like'], axis=1, inplace=True)
+
     traindata['xi'] = feature_index.values.tolist()
     args.feature_sizes = traindata['feat_dim']
     args.field_size = len(traindata['xi'][0])
+    print("args.feature_sizes:",args.feature_sizes)
+    print("args.field_size:",args.field_size)
+
 
     cnt=0
     with tf.Session(config=gpu_config) as sess:
         Model = model(args)
-        # init variables
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
-
-        sys.stdout.flush()
+        print("flush")
+        sys.stdout.flush()   #到这一步卡住了  ，为啥？原因：输出信息Allocation of 6400000000 exceeds 10% of system memory.  办法：降低batch_size
+        print(args.is_training)
         if args.is_training:
             for i in range(args.epoch):
                 print('epoch %s:' % i)
-                for j in range(2):
+                for j in range(4):
                     index_filename='train_feature_index_'+str(j)+'.csv'
                     value_filename='train_feature_value_'+str(j)+'.csv'
                     label_filename='train_label_'+str(j)+'.csv'
 
-                    feature_index=pd.read_csv(localPath+index_filename)[colsForFinish]
-                    feature_value=pd.read_csv(localPath+value_filename)[colsForFinish]
+                    feature_index=pd.read_csv(localPath+index_filename)
+                    feature_value=pd.read_csv(localPath+value_filename)
+                    feature_index.drop(['duration_time_bin_like', 'time_day_bin_like'], axis=1, inplace=True)
+                    feature_value.drop(['duration_time_bin_like', 'time_day_bin_like'], axis=1, inplace=True)
                     traindata['xi'] = feature_index.values.tolist()  #变成了list
                     traindata['xv'] = feature_value.values.tolist()
 
@@ -363,14 +337,10 @@ if __name__ == '__main__':
                     traindata['y_train_finish'] = label_finish
                     traindata['y_train_like'] = label_like
                     #这里的cnt应该是总的batch_size
-                    cnt = int(len(traindata['y_train_like']) / args.batch_size)
+                    cnt = int(len(traindata['y_train_finish']) / args.batch_size)
                     print('time all:%s' % cnt)   #一次训练batch_size个样本，迭代cnt次
                     for k in range(cnt):
-                        X_index, X_value, y = get_batch(traindata['xi'], traindata['xv'], traindata['y_train_like'], args.batch_size, k)
-                        # print('查看报错的数据行')
-                        # print(X_index)
-                        # print(X_value)
-                        # print(y)
+                        X_index, X_value, y = get_batch(traindata['xi'], traindata['xv'], traindata['y_train_finish'], args.batch_size, k)
                         '''报错的原因是因为该行数据中存在nan值，导致loss为nan'''
                         loss, step = Model.train(sess, X_index, X_value, y)
 

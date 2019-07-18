@@ -1,3 +1,4 @@
+___author__ = 'zlx'
 #!/usr/local/bin/python
 # path = '/data/code/DeepCTR/featureEngineering/spark'#all_functions.py的所在路径
 # sys.path.append(path)
@@ -23,7 +24,7 @@ class SparkFEProcess:
 
         self.parser = self.init_config()
 
-        sparkConf = SparkConf().setAppName("feature engineering on spark of explore_spark_2") \
+        sparkConf = SparkConf().setAppName("feature engineering on spark of explore_spark_step3") \
             .set("spark.ui.showConsoleProgress", "false")
         self.sc = SparkContext(conf=sparkConf)
         self.sc.broadcast(self.parser)
@@ -124,18 +125,22 @@ class SparkFEProcess:
         actionLogSchema=typ.StructType([typ.StructField(e[0],e[1],True) for e in labels])
 
         df_actLog_test = sqlContext.createDataFrame(actLog_test_rdd,actionLogSchema)
-        df_actLog_test.show(1,truncate=False)
+        # df_actLog_test.show(1,truncate=False)
 
         print('start to read actLog_train_single_cross')
         train_file_path = rootPath + 'actLog_train_single_cross'
         actLog_train_rdd = self.sc.pickleFile(train_file_path)
         df_actLog_train = sqlContext.createDataFrame(actLog_train_rdd,actionLogSchema)
-        df_actLog_train.show(1,truncate=False)
+        # df_actLog_train.show(1,truncate=False)
 
 
         return df_actLog_train, df_actLog_test
 
+
+
+
     def data_explore(self,df_train,df_test):
+
         sqlContext = SQLContext(self.sc)
 
         print("对item_pub_hour进行离散化")
@@ -153,100 +158,86 @@ class SparkFEProcess:
         df_train = df_train.withColumn("item_pub_hour", converHourBin(df_train.item_pub_hour))
         df_test = df_test.withColumn("item_pub_hour", converHourBin(df_test.item_pub_hour))
 
-        print("--------1、针对uid，authorid，musicid等组合的正负样本数量统计特征--------")
-        print("交叉特征的正负样本数量统计")
-        posneg_feats_list = []
-        # posneg_feats_list.append(["duration_time"])
-        # posneg_feats_list.append(["time_day"])
-        print('cross count')
-        users = ['uid']
-        authors = ['author_id', 'item_city', 'channel', 'music_id']  #,'item_pub_hour'
+        print("----1、计算统计特征：用户特征和item特征之间的条件概率---------")
+        feats_list = []
 
-        posneg_feats_list.extend([[u_col, a_col] for u_col in users for a_col in authors])
-        # posneg_feats_list.append(['uid','author_id', 'channel'])
-        # posneg_feats_list.append(['uid', 'author_id', 'music_id'])
-        # posneg_feats_list.append(['uid','author_id', 'channel','time_day'])
-        # posneg_feats_list.append(['uid', 'author_id', 'music_id','time_day'])
+        condition = ['uid']
+        authors = ['music_id','item_pub_hour']  #'author_id', 'item_city', 'channel',
+        feats_list.extend([[u_col, a_col] for u_col in condition for a_col in authors])
+        df_tmp=df_train.select(condition)
+        df2=df_tmp.groupby(condition).count().withColumnRenamed('count',condition[0]+'_count')
+        # df2.show(1,truncate=False) # ['uid','uid_count']
+        df2.cache()
+        # df_train=df_train.join(df2,condition,'left')
+        # df_train.show(1,truncate=False)
+        # cannot resolve '`uid_count`' given input columns: [time, user_city, like, author_id, uid, device, music_id, finish, duration_time, channel, item_city, item_id]
+        # del df2
+        # gc.collect()
+        for feature_group in feats_list:
+            print(feature_group+[feature_group[0]+'_count'])   #+[feature_group[0]+'_count']
+            df1=df_train.select(feature_group).groupby(feature_group).count()
+            # df1.show(1,truncate=False)   #理论上还是只有3个字段，不包含uid_count
+            df1=df1.join(df2,condition,'left')
+            df1.show(1,truncate=False)   #|uid|item_pub_hour|count|uid_count
+            df1=df1.withColumn(feature_group[1]+'_'+feature_group[0]+"_condition_ratio",fn.col('count')/fn.col(feature_group[0]+'_count'))
+            df1=df1.drop('count').drop(feature_group[0]+'_count')
+            df1.show(1,truncate=False)
+            print(df_train.columns)
+            print(df1.columns)
+            df_train=df_train.join(df1,feature_group,"left")   #|uid|item_pub_hour|item_pub_hour_uid_condition_ratio
+            df_train.show(1,truncate=False)
+            df_test=df_test.join(df1,feature_group,"left").na.fill({feature_group[1]+'_'+feature_group[0]+"_condition_ratio":0})  #对某一列填充缺失值
+            df_test.show(1,truncate=False)
 
-        print("计算以下交叉特征的正负样本比例")  #有2、3、4维的交叉特征
-        print(posneg_feats_list)
 
-        for i in range(len(posneg_feats_list)):
-            group_cols=posneg_feats_list[i]
-            new_feature = '_'.join(group_cols)
-            #计算df_train数据中正负样本的比例，test中直接拼接，为null则填充为0或者均值
-            #正负样本判定字段：like  finish
-            #d第一步，先拼接
-            print(new_feature)
-            if len(group_cols)==2:
-                print("开始处理2维交叉变量")
-                df_train=df_train.withColumn(new_feature, fn.concat_ws('_',df_train[group_cols[0]].cast(typ.StringType()),df_train[group_cols[1]].cast(typ.StringType()))
-                                                                 )
-                df_test=df_test.withColumn(new_feature, fn.concat_ws('_',df_test[group_cols[0]].cast(typ.StringType()),df_test[group_cols[1]].cast(typ.StringType()))
-                                                                 )
 
-            if len(group_cols)==3:
+        feats_list = []
+        condition = ['item_id']
+        authors = ['uid_city', 'channel']
+        feats_list.extend([[u_col, a_col] for u_col in condition for a_col in authors])
 
-                print("开始处理3维交叉变量")
-                df_train=df_train.withColumn(new_feature, fn.concat_ws('_',df_train[group_cols[0]].cast(typ.StringType()),df_train[group_cols[1]].cast(typ.StringType()))
-                                                                 ,df_train[group_cols[2]].cast(typ.StringType()))
-                df_test=df_test.withColumn(new_feature, fn.concat_ws('_',df_test[group_cols[0]].cast(typ.StringType()),df_test[group_cols[1]].cast(typ.StringType()))
-                                                                 ,df_test[group_cols[2]].cast(typ.StringType()))
-            # if len(group_cols)==4:
-            #
-            #     print("开始处理4维交叉变量")
-            #     df_train=df_train.withColumn(new_feature, fn.concat_ws('_',df_train[group_cols[0]].cast(typ.StringType()),df_train[group_cols[1]].cast(typ.StringType()))
-            #                                                      ,df_train[group_cols[2]].cast(typ.StringType()) ,df_train[group_cols[3]].cast(typ.StringType()))
-            #     df_test=df_test.withColumn(new_feature, fn.concat_ws('_',df_test[group_cols[0]].cast(typ.StringType()),df_test[group_cols[1]].cast(typ.StringType()))
-            #                                                      ,df_test[group_cols[2]].cast(typ.StringType()) ,df_test[group_cols[3]].cast(typ.StringType()))
+        df_tmp=df_train.select(condition)
+        df2=df_tmp.groupby(condition).count().withColumnRenamed('count',condition[0]+'_count')
+        # df2.show(1,truncate=False) # ['uid','uid_count']
+        df2.cache()
+        # df_train=df_train.join(df2,condition,'left')
+        # df_train.show(1,truncate=False)
+        # cannot resolve '`uid_count`' given input columns: [time, user_city, like, author_id, uid, device, music_id, finish, duration_time, channel, item_city, item_id]
+        # del df2
+        # gc.collect()
+        for feature_group in feats_list:
+            print(feature_group+[feature_group[0]+'_count'])   #+[feature_group[0]+'_count']
+            df1=df_train.select(feature_group).groupby(feature_group).count()
+            # df1.show(1,truncate=False)   #理论上还是只有3个字段，不包含uid_count
+            df1=df1.join(df2,condition,'left')
+            df1.show(1,truncate=False)
+            df1=df1.withColumn(feature_group[1]+'_'+feature_group[0]+"_condition_ratio",fn.col('count')/fn.col(feature_group[0]+'_count'))
+            df1=df1.drop('count').drop(feature_group[0]+'_count')
+            # df1.show(5)
+            df_train=df_train.join(df1,feature_group,"left")
+            df_train.show(1,truncate=False)
+            df_test=df_test.join(df1,feature_group,"left").na.fill({feature_group[1]+'_'+feature_group[0]+"_condition_ratio":0})  #对某一列填充缺失值
+            df_test.show(1,truncate=False)
 
-            for target in ["like","finish"] :
-                df3=df_train.select(new_feature,target).groupby(new_feature).count().withColumnRenamed('count',new_feature+'_count')
-                df4=df_train.select(new_feature,target).where(df_train[target]==1).groupby(new_feature).count().withColumnRenamed('count',new_feature+"_count_"+target+"_1")
-                df3=df3.join(df4,new_feature,'left').na.fill(0)
-                del df4
-                gc.collect()
-                # print("两列相除:得到正样本的比例",target)
-                df3=df3.withColumn(new_feature+"_"+target+"_pos_neg",fn.col(new_feature+"_count_"+target+"_1")/fn.col(new_feature+'_count'))
-                df3=df3.drop(new_feature+"_count_"+target+"_1",new_feature+'_count')
-                print("新的df_train",new_feature,target)
-                df_train=df_train.join(df3,new_feature,"left")
-                df_train.show(1)
-                df_test=df_test.join(df3,new_feature,"left") #会存在null，缺失值设置为0
-                print("新的df_test",new_feature,target)
-                df_test.show(1)
-                df_test=df_test.na.fill(0)
-                del df3
-                gc.collect()
-            if new_feature not in ["duration_time","time_day"]:
-                df_train=df_train.drop(new_feature)
-                df_test=df_test.drop(new_feature)
-                df_train.printSchema()
-                df_test.printSchema()
 
-        print('最终表结构，该表结构用于concate的输入')   #是不是应该有build_data_for_like  build_data_for_finish
+        df_train=df_train.drop('uid_count').drop('item_id_count')
         df_train.printSchema()
         df_test.printSchema()
 
-        print("查看test缺失值")
-        df_test.agg(*[(1-(fn.count(c) /fn.count('*'))).alias(c+'_missing') for c in posneg_feats_list]).show()
-        print("查看train缺失值")
-        df_train.agg(*[(1-(fn.count(c) /fn.count('*'))).alias(c+'_missing') for c in posneg_feats_list]).show()
-
         print('-------5.保存数据预处理结果-------')
-        test_file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'actLog_test_step2'
+        test_file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'actLog_test_step3_try'
         os.system("hadoop fs -rm -r {}".format(test_file_path))
         df_test.rdd.map(tuple).saveAsPickleFile(test_file_path)
 
         del df_test
         gc.collect()
 
-        train_file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'actLog_train_step2'
+        train_file_path = self.parser.get("hdfs_path", "hdfs_data_path") + 'actLog_train_step3_try'
         os.system("hadoop fs -rm -r {}".format(train_file_path))  #os.system(command) 其参数含义如下所示: command 要执行的命令
         df_train.rdd.map(tuple).saveAsPickleFile(train_file_path)
 
 
-
+        #观察这波特征如何与
 
 
 if __name__ == "__main__":

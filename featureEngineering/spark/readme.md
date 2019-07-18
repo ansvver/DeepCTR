@@ -66,3 +66,27 @@ time_day_bin_finish
 [0,632)
 
 
+concate_spark.py
+
+测试文件及其大小，根据item_id或者uid进行左连接
+actLog_test_single_cross    655.5 M
+nlp_topic_feature2          553.9 M    与前面文件关联后，大小为625.7 M
+face_feature                154.8 M    与前面文件关联后，大小为752.7 M
+df_uid_face_test            93.4 M     与前面文件关联后，大小为823.8 M
+
+关联后的文件大小为：215.4 G   大小增加了300倍？
+如何缩小关联后文件的大小？
+1、删除暂时用不到的列
+2、将face相关的特征 有小数点的数据，均保留3位小数后
+经上述处理后关联文件的大小为：211.4G  才减少了4G，到底是什么原因导致的？是因为df_uid_face_test中的记录没有去重
+
+
+将以下训练集文件进行关联及各文件大小：根据item_id或者uid进行左连接
+actLog_train_single_cross   4.4G
+df_uid_face_train           683.5 M
+face_feature                154.8 M
+nlp_topic_feature2          553.9 M
+关联后文件的大小的为：
+
+
+
