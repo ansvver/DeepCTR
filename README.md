@@ -1,6 +1,9 @@
 dos2unix工具：windows下编辑过的文件在linux上可能会存在^M 符号，
              在linux上直接调用dos2unix filename即可消除末尾的换行符号
 
+可参考的离散化方法：
+round(log(x*x+1))
+
 #pytorch dnn_ctr 参考链接
 The framework to deal with ctr problem
 
