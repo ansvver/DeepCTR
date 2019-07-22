@@ -327,6 +327,7 @@ class SparkFEProcess:
         mean_relative_position3=0.164
         mean_max_beauty=0.792
         mean_avg_beauty=0.53
+        #下面注释部分是均值的计算，运行中为减少内存消耗和加快训练速度，直接把之前计算的结果用上了
 
         # df=df_train.union(df_test)
         # mean_val = df.select(fn.mean(df['beauty'])).collect()

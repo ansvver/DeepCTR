@@ -1,0 +1,115 @@
+DeDeepCTR项目
+整个项目主要分为特征工程、deepfm模型、gbdt+lr模型、LDA模型，其中特征工程、deepfm模型代码用pyspark实现，分别位于featureEngineering和Tensorflow下两个文件下，featureEngineering主要完成特征工程部分，以及将特征工程处理后的数据转化为deepfm所需要的输入形式，Tensorflow主要完成deepfm模型的训练，项目位于git地址：https://github.com/ZBNLP/DeepCTR.git，而scala版本的gbdt+lr模型、LDA模型位于git地址：https://github.com/ZBNLP/DeepCtrScala.git
+
+一、	特征工程部分：
+/featureEngineering/spark/explore_spark_step1_single.py:
+该py文件主要实现以下功能：
+1、	对时间戳字段进行处理，获取衍生字段年月日时分等
+2、	计算基础特征，也就是单变量的count、类别偏好的ratio
+3、测试集中有以下字段缺失，并填充相应值
+uid_count_bin：因为测试集中出现了新的uid，这个时候bin填充为-1
+item_id_count_bin： 因为测试集中出现了新的item_id ,缺失率为0.6，所以对于新的item_id其count特征不能知道，但是后面可通过item_id可以关联nlp、face特征
+author_id_count_bin：缺失率为0.14
+#duration_time是一个连续变量，不应该在计算count后分箱，而是画图后直接分箱，在后面的文件中会处理
+item_city_count_bin：
+music_id_count_bin：
+device_count_bin：缺失率为0.03
+此外，每一个bin变量对应一个ratio变量，表示对每个类别的偏好，缺失值填充为0
+
+/featureEngineering/spark/explore_spark_step1_cross.py:
+主要功能如下：
+1、计算交叉特征的count、类别偏好的ratio
+2、测试集中有以下字段缺失，并填充相应值
+uid_item_id_count_bin：缺失率为0.995 ，因此判断该变量没有区分度，不构造此变量
+uid_author_id_count_bin：缺失率为0.86，最终还是保留了该变量，因为考虑到实际中用户对发布者还是存在一定的偏爱
+uid_item_city_count_bin：缺失率为0.18，对缺失值填充-1
+uid_channel_count_bin：缺失率为0.039，对缺失值填充-1
+uid_music_id_count_bin：缺失率为0.256，对缺失值填充-1
+uid_device_count_bin：缺失率为0.03，对缺失值填充-1
+author_id_channel_count_bin：缺失率为0.18，对缺失值填充-1
+author_id_user_city_count_bin：缺失率为0.46，对缺失值填充-1
+author_id_item_city_count_bin：缺失率为0.17，对缺失值填充-1
+author_id_music_id_count_bin：缺失率为0.28，对缺失值填充-1
+uid_channel_device_count_bin：缺失率为0.05，对缺失值填充-1
+author_id_music_id_item_pub_hour_count_bin：缺失率为0.35，对缺失值填充-1
+此外，每一个bin变量对应一个ratio变量，表示对每个类别的偏好，缺失值填充为0
+
+explore_spark_step1_single.py和explore_spark_step1_cross.py两个文件实现的功能是一样的，前者是对基础变量的处理，后者是对交叉变量的处理，只是在目前集群环境中，内存有限，放在同一代码中处理会产生内存溢出，运行缓慢等问题，所以拆成了两个文件
+
+
+
+/featureEngineering/spark/explore_spark_step2.py:读取上述两步的处理结果，针对uid，authorid，musicid等组合，统计各交叉特征的正样本概率，并保存在hdfs上。具体交叉特征有：（uid,author_id）,(uid,item_city),
+(uid,channel),(uid,music_id)
+
+
+/featureEngineering/spark/explore_spark_step3.py:读取上述三步的处理结果，计算统计特征：用户特征和item特征之间的条件概率，并保存在hdfs上。具体特征有p(music_id|uid),p(item_pub_hour|uid),p(uid_city|item_id), p(channel|item_id)
+
+/featureEngineering/spark/explore_nlp_spark.py：对track2_title.txt文件进行处理，功能如下：
+1、	统计title中不同词的个数unique，以及title的长度
+2、	训练LDA模型pyspark版本，并根据模型提取每个item_id对应的主题序号，这里一共训练50个主题
+
+
+/featureEngineering/spark/explore_face_spark.py：对face中beauty和gender字段计算其统计特征：
+1、beauty的特征（max，avg）
+2、每个item_id对应的gender比例
+
+
+/featureEngineering/spark/concate_spark.py：主要完成duration_time、time_day字段的离散化处理和上面所述文件结果的left join，具体如下：
+1、根据like的比例和finish的比例，对duration_time、time_day进行区间划分，具体划分为：
+根据like_ratio对duration_time进行区间划分
+duration_time_bin_like
+[0,1,2]
+[3,...12]
+[13,14,15]
+[16,...22]
+[23,...42]
+[43+]
+
+根据finish_ratio对duration_time进行区间划分
+duration_time_bin_finish
+[0,1,2]
+[3,...,12]
+[13,...,26]
+[27,....,42]
+[43+]
+
+根据like_ratio对time_day进行区间划分
+time_day_bin_like
+[822+]
+[810,822)
+[781,810)
+[748,781)
+[726,748)
+[646,726)
+[0,646)
+
+根据finish_ratio对time_day进行区间划分
+time_day_bin_finish
+[795+]
+[792,795)
+[781,792)
+[632,781)
+[0,632)
+
+3、	数据拼接left join
+
+至此，特征工程部分全部结束
+
+二、Deepfm模型
+1、deepfm模型的数据准备
+/featureEngineering/spark/build_data_forDeepfm_spark.py：将上述所有经特征工程处理后的数据，转化为符合deepfm模型的输入形式，由于数据量大，分批保存到本地。
+2、deepfm模型的训练
+主要包含四个文件：
+/Tensorflow/deepfm/deepfm_train_like.py
+/Tensorflow/deepfm/deepfm_test_like.py
+/Tensorflow/deepfm/deepfm_train_finish.py
+/Tensorflow/deepfm/deepfm_test_finish.py
+分别对like和finish进行模型训练和预测，这里batch_size暂定为10000，batch_size值过小，导致训练不准确，值过大，训练慢，内存不够。
+
+三、gbdt+lr模型scala版本
+gbdt+lr模型只做了scala版本，因为scala中用到的包，pyspark中还没有实现，所以无法获取到gbdt最后产生的叶子节点
+gbdt+lr模型的输入是/featureEngineering/spark/concate_spark.py产生的数据，可以是csv形式的数据，也可以是hdfs数据，目前上传的代码中只用了部分数据，以测试功能，目前代码为gbdt_lr_yarn.scala
+
+四、	LDA模型scala版本
+1、	训练LDA模型，并根据模型提取每个item_id对应的主题序号，参数可调整
+
